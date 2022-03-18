@@ -47,7 +47,7 @@ Jeecg-Boot低代码开发平台，可以应用在任何J2EE项目的开发中，
 
 - 在线演示 ： [http://boot.jeecg.com](http://boot.jeecg.com)
 
-- 开发文档：  [http://doc.jeecg.com](http://doc.jeecg.com/2043874)
+- 开发文档：  [http://doc.jeecg.com](http://doc.jeecg.com)
 
 - 入门视频： [https://space.bilibili.com/454617261/channel/series](https://space.bilibili.com/454617261/channel/series)
 
