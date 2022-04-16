@@ -11,6 +11,7 @@ import javax.annotation.Resource;
 
 /**
  * feign服务端接口
+ * @author: jeecg-boot
  */
 @RestController
 @RequestMapping("/test")
