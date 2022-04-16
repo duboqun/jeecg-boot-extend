@@ -1,16 +1,20 @@
 package org.jeecg.common.online.api.factory;
 
-import feign.hystrix.FallbackFactory;
-import org.jeecg.common.online.api.IOnlineBaseExtAPI;
-import org.jeecg.common.online.api.fallback.OnlineBaseExtAPIFallback;
+import org.springframework.cloud.openfeign.FallbackFactory;
+import org.jeecg.common.online.api.IOnlineBaseExtApi;
+import org.jeecg.common.online.api.fallback.OnlineBaseExtApiFallback;
 import org.springframework.stereotype.Component;
 
+/**
+ * @Description: OnlineBaseExtAPIFallbackFactory
+ * @author: jeecg-boot
+ */
 @Component
-public class OnlineBaseExtAPIFallbackFactory implements FallbackFactory<IOnlineBaseExtAPI> {
+public class OnlineBaseExtApiFallbackFactory implements FallbackFactory<IOnlineBaseExtApi> {
 
     @Override
-    public IOnlineBaseExtAPI create(Throwable throwable) {
-        OnlineBaseExtAPIFallback fallback = new OnlineBaseExtAPIFallback();
+    public IOnlineBaseExtApi create(Throwable throwable) {
+        OnlineBaseExtApiFallback fallback = new OnlineBaseExtApiFallback();
         fallback.setCause(throwable);
         return fallback;
     }

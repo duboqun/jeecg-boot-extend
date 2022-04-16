@@ -2,8 +2,9 @@ package org.jeecg.common.online.api;
 
 import com.alibaba.fastjson.JSONObject;
 import org.jeecg.common.constant.ServiceNameConstants;
-import org.jeecg.common.online.api.factory.OnlineBaseExtAPIFallbackFactory;
+import org.jeecg.common.online.api.factory.OnlineBaseExtApiFallbackFactory;
 import org.jeecg.common.system.vo.DictModel;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
@@ -12,21 +13,33 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 【Online】Feign API接口
+ * @Description: 【Online】Feign API接口
+ *
+ * @ConditionalOnMissingClass("org.jeecg.modules.online.cgform.service.impl.OnlineBaseExtApiImpl") => 有实现类的时候，不实例化Feign接口
+ * @author: jeecg-boot
  */
 @Component
-@FeignClient(contextId = "onlineBaseRemoteApi", value = ServiceNameConstants.SYSTEM_SERVICE, fallbackFactory = OnlineBaseExtAPIFallbackFactory.class)
-//@FeignClient(contextId = "onlineBaseRemoteApi", value = ServiceNameConstants.SYSTEM_ONLINE, fallbackFactory = OnlineBaseExtAPIFallbackFactory.class)
-public interface IOnlineBaseExtAPI {
+//@FeignClient(contextId = "onlineBaseRemoteApi", value = ServiceNameConstants.SERVICE_ONLINE, fallbackFactory = OnlineBaseExtApiFallbackFactory.class)
+@FeignClient(contextId = "onlineBaseRemoteApi", value = ServiceNameConstants.SERVICE_SYSTEM, fallbackFactory = OnlineBaseExtApiFallbackFactory.class)
+@ConditionalOnMissingClass("org.jeecg.modules.online.cgform.service.impl.OnlineBaseExtApiImpl")
+public interface IOnlineBaseExtApi {
 
     /**
      * 【Online】 表单设计器专用：同步新增
+     * @param tableName 表名
+     * @param jsonObject
+     * @throws Exception
+     * @return String
      */
     @PostMapping(value = "/online/api/cgform/crazyForm/{name}")
     String cgformPostCrazyForm(@PathVariable("name") String tableName, @RequestBody JSONObject jsonObject) throws Exception;
 
     /**
      * 【Online】 表单设计器专用：同步编辑
+     * @param tableName 表名
+     * @param jsonObject
+     * @throws Exception
+     * @return String
      */
     @PutMapping(value = "/online/api/cgform/crazyForm/{name}")
     String cgformPutCrazyForm(@PathVariable("name") String tableName, @RequestBody JSONObject jsonObject) throws Exception;
@@ -64,7 +77,10 @@ public interface IOnlineBaseExtAPI {
 
     /**
      * 【cgreport】对 cgreportGetData 的返回值做优化，封装 DictModel 集合
-     *
+     * @param code
+     * @param dictText
+     * @param dictCode
+     * @param dataList
      * @return
      */
     @GetMapping("/online/api/cgreportGetDataPackage")

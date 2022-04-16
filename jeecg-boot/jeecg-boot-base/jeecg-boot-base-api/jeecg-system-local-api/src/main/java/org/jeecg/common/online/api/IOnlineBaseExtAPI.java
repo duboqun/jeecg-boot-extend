@@ -11,15 +11,23 @@ import java.util.Map;
  *
  * @author sunjianlei
  */
-public interface IOnlineBaseExtAPI {
+public interface IOnlineBaseExtApi {
 
     /**
      * 【Online】 表单设计器专用：同步新增
+     * @param tableName 表名
+     * @param jsonObject
+     * @throws Exception
+     * @return String
      */
     String cgformPostCrazyForm(String tableName, JSONObject jsonObject) throws Exception;
 
     /**
      * 【Online】 表单设计器专用：同步编辑
+     * @param tableName 表名
+     * @param jsonObject
+     * @throws Exception
+     * @return String
      */
     String cgformPutCrazyForm(String tableName, JSONObject jsonObject) throws Exception;
 
@@ -43,7 +51,10 @@ public interface IOnlineBaseExtAPI {
 
     /**
      * 对 cgreportGetData 的返回值做优化，封装 DictModel 集合
-     *
+     * @param code
+     * @param dictCode
+     * @param dataList
+     * @param dictText 字典文本
      * @return
      */
     List<DictModel> cgreportGetDataPackage(String code, String dictText, String dictCode, String dataList);

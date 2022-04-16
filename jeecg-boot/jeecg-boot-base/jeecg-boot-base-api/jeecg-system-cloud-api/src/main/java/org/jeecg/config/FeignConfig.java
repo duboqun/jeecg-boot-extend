@@ -44,12 +44,21 @@ import feign.codec.Encoder;
 import feign.form.spring.SpringFormEncoder;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * @Description: FeignConfig
+ * @author: JeecgBoot
+ */
 @ConditionalOnClass(Feign.class)
 @AutoConfigureBefore(FeignAutoConfiguration.class)
 @Slf4j
 @Configuration
 public class FeignConfig {
 
+    /**
+     * 设置feign header参数
+     * 【X_ACCESS_TOKEN】【X_SIGN】【X_TIMESTAMP】
+     * @return
+     */
     @Bean
     public RequestInterceptor requestInterceptor() {
         return requestTemplate -> {
@@ -62,38 +71,42 @@ public class FeignConfig {
                 if(token==null || "".equals(token)){
                     token = request.getParameter("token");
                 }
-                log.debug("Feign request token: {}", token);
+                log.info("Feign Login Request token: {}", token);
                 requestTemplate.header(CommonConstant.X_ACCESS_TOKEN, token);
-
-                //根据URL地址过滤请求 【字典表参数签名验证】
-                if (PathMatcherUtil.matches(Arrays.asList(SignAuthConfiguration.urlList),requestTemplate.path())) {
-                    try {
-                        log.info("============================ [begin] fegin api url ============================");
-                        log.info(requestTemplate.path());
-                        log.info(requestTemplate.method());
-                        String queryLine = requestTemplate.queryLine();
-                        if(queryLine!=null && queryLine.startsWith("?")){
-                            queryLine = queryLine.substring(1);
-                        }
-                        log.info(queryLine);
-                        if(requestTemplate.body()!=null){
-                            log.info(new String(requestTemplate.body()));
-                        }
-                        SortedMap<String, String> allParams = HttpUtils.getAllParams(requestTemplate.path(),queryLine,requestTemplate.body(),requestTemplate.method());
-                        String sign = SignUtil.getParamsSign(allParams);
-                        log.info(" Feign request params sign: {}",sign);
-                        log.info("============================ [end] fegin api url ============================");
-                        requestTemplate.header(CommonConstant.X_SIGN, sign);
-                        requestTemplate.header(CommonConstant.X_TIMESTAMP, DateUtils.getCurrentTimestamp().toString());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
             }else{
+                //解决后台任务、MQ中调用feign接口，无会话token的问题
                 String  token = UserTokenContext.getToken();
-                log.debug("Feign request token: {}", token);
+                log.info("Feign No Login token: {}", token);
                 requestTemplate.header(CommonConstant.X_ACCESS_TOKEN, token);
             }
+
+            //================================================================================================================
+            //针对特殊接口，进行加签验证 ——根据URL地址过滤请求 【字典表参数签名验证】
+            if (PathMatcherUtil.matches(Arrays.asList(SignAuthConfiguration.SIGN_URL_LIST),requestTemplate.path())) {
+                try {
+                    log.info("============================ [begin] fegin api url ============================");
+                    log.info(requestTemplate.path());
+                    log.info(requestTemplate.method());
+                    String queryLine = requestTemplate.queryLine();
+                    String questionMark="?";
+                    if(queryLine!=null && queryLine.startsWith(questionMark)){
+                        queryLine = queryLine.substring(1);
+                    }
+                    log.info(queryLine);
+                    if(requestTemplate.body()!=null){
+                        log.info(new String(requestTemplate.body()));
+                    }
+                    SortedMap<String, String> allParams = HttpUtils.getAllParams(requestTemplate.path(),queryLine,requestTemplate.body(),requestTemplate.method());
+                    String sign = SignUtil.getParamsSign(allParams);
+                    log.info(" Feign request params sign: {}",sign);
+                    log.info("============================ [end] fegin api url ============================");
+                    requestTemplate.header(CommonConstant.X_SIGN, sign);
+                    requestTemplate.header(CommonConstant.X_TIMESTAMP, DateUtils.getCurrentTimestamp().toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            //================================================================================================================
         };
     }
 
@@ -125,6 +138,9 @@ public class FeignConfig {
     }
 
     // update-begin--Author:sunjianlei Date:20210604 for： 给 Feign 添加 FastJson 的解析支持 ----------
+    /**
+     * 给 Feign 添加 FastJson 的解析支持
+     */
     @Bean
     public Encoder feignEncoder() {
         return new SpringEncoder(feignHttpMessageConverter());

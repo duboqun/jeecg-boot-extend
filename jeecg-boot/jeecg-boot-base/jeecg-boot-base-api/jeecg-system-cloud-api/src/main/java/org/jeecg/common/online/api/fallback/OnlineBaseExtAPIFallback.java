@@ -3,7 +3,7 @@ package org.jeecg.common.online.api.fallback;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.jeecg.common.online.api.IOnlineBaseExtAPI;
+import org.jeecg.common.online.api.IOnlineBaseExtApi;
 import org.jeecg.common.system.vo.DictModel;
 
 import java.util.List;
@@ -11,9 +11,10 @@ import java.util.Map;
 
 /**
  * 进入fallback的方法 检查是否token未设置
+ * @author: jeecg-boot
  */
 @Slf4j
-public class OnlineBaseExtAPIFallback implements IOnlineBaseExtAPI {
+public class OnlineBaseExtApiFallback implements IOnlineBaseExtApi {
 
     @Setter
     private Throwable cause;

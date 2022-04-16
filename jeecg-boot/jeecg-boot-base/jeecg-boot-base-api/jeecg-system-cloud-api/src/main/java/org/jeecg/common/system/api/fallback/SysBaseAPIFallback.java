@@ -14,6 +14,7 @@ import java.util.Set;
 
 /**
  * 进入fallback的方法 检查是否token未设置
+ * @author: jeecg-boot
  */
 @Slf4j
 public class SysBaseAPIFallback implements ISysBaseAPI {
@@ -79,11 +80,12 @@ public class SysBaseAPIFallback implements ISysBaseAPI {
 
     @Override
     public List<DictModel> queryAllDict() {
+        log.error("fegin接口queryAllDict失败："+cause.getMessage(), cause);
         return null;
     }
 
     @Override
-    public List<SysCategoryModel> queryAllDSysCategory() {
+    public List<SysCategoryModel> queryAllSysCategory() {
         return null;
     }
 
