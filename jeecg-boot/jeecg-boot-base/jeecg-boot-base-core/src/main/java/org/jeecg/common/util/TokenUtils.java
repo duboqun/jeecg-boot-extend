@@ -35,7 +35,7 @@ public class TokenUtils {
     /**
      * 验证Token
      */
-    public static boolean verifyToken(HttpServletRequest request, CommonAPI commonAPI, RedisUtil redisUtil) {
+    public static boolean verifyToken(HttpServletRequest request, CommonAPI commonApi, RedisUtil redisUtil) {
         log.debug(" -- url --" + request.getRequestURL());
         String token = getTokenByRequest(request);
 
@@ -50,7 +50,7 @@ public class TokenUtils {
         }
 
         // 查询用户信息
-        LoginUser user = commonAPI.getUserByName(username);
+        LoginUser user = commonApi.getUserByName(username);
         if (user == null) {
             throw new JeecgBoot401Exception("用户不存在!");
         }
@@ -68,7 +68,7 @@ public class TokenUtils {
     /**
      * 验证Token
      */
-    public static boolean verifyToken(String token, CommonAPI commonAPI, RedisUtil redisUtil) {
+    public static boolean verifyToken(String token, CommonAPI commonApi, RedisUtil redisUtil) {
         if (StringUtils.isBlank(token)) {
             throw new JeecgBoot401Exception("token不能为空!");
         }
@@ -80,7 +80,7 @@ public class TokenUtils {
         }
 
         // 查询用户信息
-        LoginUser user = commonAPI.getUserByName(username);
+        LoginUser user = commonApi.getUserByName(username);
         if (user == null) {
             throw new JeecgBoot401Exception("用户不存在!");
         }
@@ -104,14 +104,14 @@ public class TokenUtils {
      * @return
      */
     private static boolean jwtTokenRefresh(String token, String userName, String passWord, RedisUtil redisUtil) {
-        String cacheToken = String.valueOf(redisUtil.get(CommonConstant.PREFIX_USER_TOKEN + token));
+        String cacheToken = oConvertUtils.getString(redisUtil.get(CommonConstant.PREFIX_USER_TOKEN + token));
         if (oConvertUtils.isNotEmpty(cacheToken)) {
             // 校验token有效性
             if (!JwtUtil.verify(cacheToken, userName, passWord)) {
                 String newAuthorization = JwtUtil.sign(userName, passWord);
                 // 设置Toekn缓存有效时间
                 redisUtil.set(CommonConstant.PREFIX_USER_TOKEN + token, newAuthorization);
-                redisUtil.expire(CommonConstant.PREFIX_USER_TOKEN + token, JwtUtil.EXPIRE_TIME*2 / 1000);
+                redisUtil.expire(CommonConstant.PREFIX_USER_TOKEN + token, JwtUtil.EXPIRE_TIME * 2 / 1000);
             }
             //update-begin--Author:scott  Date:20191005  for：解决每次请求，都重写redis中 token缓存问题
 //            else {

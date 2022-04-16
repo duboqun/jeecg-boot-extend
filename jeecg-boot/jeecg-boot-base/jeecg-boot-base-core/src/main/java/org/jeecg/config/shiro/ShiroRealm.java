@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.Set;
 
 /**
@@ -34,7 +35,7 @@ import java.util.Set;
 public class ShiroRealm extends AuthorizingRealm {
 	@Lazy
     @Resource
-    private CommonAPI commonAPI;
+    private CommonAPI commonApi;
 
     @Lazy
     @Resource
@@ -57,7 +58,7 @@ public class ShiroRealm extends AuthorizingRealm {
      */
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-        log.info("===============Shiro权限认证开始============ [ roles、permissions]==========");
+        log.debug("===============Shiro权限认证开始============ [ roles、permissions]==========");
         String username = null;
         if (principals != null) {
             LoginUser sysUser = (LoginUser) principals.getPrimaryPrincipal();
@@ -66,12 +67,12 @@ public class ShiroRealm extends AuthorizingRealm {
         SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
 
         // 设置用户拥有的角色集合，比如“admin,test”
-        Set<String> roleSet = commonAPI.queryUserRoles(username);
+        Set<String> roleSet = commonApi.queryUserRoles(username);
         System.out.println(roleSet.toString());
         info.setRoles(roleSet);
 
         // 设置用户拥有的权限集合，比如“sys:role:add,sys:user:add”
-        Set<String> permissionSet = commonAPI.queryUserAuths(username);
+        Set<String> permissionSet = commonApi.queryUserAuths(username);
         info.addStringPermissions(permissionSet);
         System.out.println(permissionSet);
         log.info("===============Shiro权限认证成功==============");
@@ -91,7 +92,8 @@ public class ShiroRealm extends AuthorizingRealm {
         log.debug("===============Shiro身份认证开始============doGetAuthenticationInfo==========");
         String token = (String) auth.getCredentials();
         if (token == null) {
-            log.info("————————身份认证失败——————————IP地址:  "+ oConvertUtils.getIpAddrByRequest(SpringContextUtils.getHttpServletRequest()));
+            HttpServletRequest req = SpringContextUtils.getHttpServletRequest();
+            log.info("————————身份认证失败——————————IP地址:  "+ oConvertUtils.getIpAddrByRequest(req) +"，URL:"+req.getRequestURI());
             throw new AuthenticationException("token为空!");
         }
         // 校验token有效性
@@ -120,7 +122,7 @@ public class ShiroRealm extends AuthorizingRealm {
 
         // 查询用户信息
         log.debug("———校验token是否有效————checkUserTokenIsEffect——————— "+ token);
-        LoginUser loginUser = commonAPI.getUserByName(username);
+        LoginUser loginUser = commonApi.getUserByName(username);
         if (loginUser == null) {
             throw new AuthenticationException("用户不存在!");
         }
@@ -136,7 +138,8 @@ public class ShiroRealm extends AuthorizingRealm {
         String userTenantIds = loginUser.getRelTenantIds();
         if(oConvertUtils.isNotEmpty(userTenantIds)){
             String contextTenantId = TenantContext.getTenant();
-            if(oConvertUtils.isNotEmpty(contextTenantId) && !"0".equals(contextTenantId)){
+            String str ="0";
+            if(oConvertUtils.isNotEmpty(contextTenantId) && !str.equals(contextTenantId)){
                 //update-begin-author:taoyan date:20211227 for: /issues/I4O14W 用户租户信息变更判断漏洞
                 String[] arr = userTenantIds.split(",");
                 if(!oConvertUtils.isIn(contextTenantId, arr)){
@@ -182,6 +185,8 @@ public class ShiroRealm extends AuthorizingRealm {
             //update-end--Author:scott  Date:20191005   for：解决每次请求，都重写redis中 token缓存问题
             return true;
         }
+
+        //redis中不存在此TOEKN，说明token非法返回false
         return false;
     }
 
