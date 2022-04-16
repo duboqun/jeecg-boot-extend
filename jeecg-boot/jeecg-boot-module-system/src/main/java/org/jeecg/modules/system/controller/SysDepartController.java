@@ -171,7 +171,7 @@ public class SysDepartController {
 	 * @param sysDepart
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/add", method = RequestMethod.POST)
 	@CacheEvict(value= {CacheConstant.SYS_DEPARTS_CACHE,CacheConstant.SYS_DEPART_IDS_CACHE}, allEntries=true)
 	public Result<SysDepart> add(@RequestBody SysDepart sysDepart, HttpServletRequest request) {
@@ -197,7 +197,7 @@ public class SysDepartController {
 	 * @param sysDepart
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	@CacheEvict(value= {CacheConstant.SYS_DEPARTS_CACHE,CacheConstant.SYS_DEPART_IDS_CACHE}, allEntries=true)
 	public Result<SysDepart> edit(@RequestBody SysDepart sysDepart, HttpServletRequest request) {
@@ -225,7 +225,7 @@ public class SysDepartController {
     * @param id
     * @return
     */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
     @RequestMapping(value = "/delete", method = RequestMethod.DELETE)
 	@CacheEvict(value= {CacheConstant.SYS_DEPARTS_CACHE,CacheConstant.SYS_DEPART_IDS_CACHE}, allEntries=true)
    public Result<SysDepart> delete(@RequestParam(name="id",required=true) String id) {
@@ -253,7 +253,7 @@ public class SysDepartController {
 	 * @param ids
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/deleteBatch", method = RequestMethod.DELETE)
 	@CacheEvict(value= {CacheConstant.SYS_DEPARTS_CACHE,CacheConstant.SYS_DEPART_IDS_CACHE}, allEntries=true)
 	public Result<SysDepart> deleteBatch(@RequestParam(name = "ids", required = true) String ids) {
@@ -370,7 +370,7 @@ public class SysDepartController {
      * @param response
      * @return
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/importExcel", method = RequestMethod.POST)
 	@CacheEvict(value= {CacheConstant.SYS_DEPARTS_CACHE,CacheConstant.SYS_DEPART_IDS_CACHE}, allEntries=true)
     public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response) {
@@ -379,14 +379,15 @@ public class SysDepartController {
 		List<SysDepart> listSysDeparts = null;
         Map<String, MultipartFile> fileMap = multipartRequest.getFileMap();
         for (Map.Entry<String, MultipartFile> entity : fileMap.entrySet()) {
-            MultipartFile file = entity.getValue();// 获取上传文件对象
+            // 获取上传文件对象
+            MultipartFile file = entity.getValue();
             ImportParams params = new ImportParams();
             params.setTitleRows(2);
             params.setHeadRows(1);
             params.setNeedSave(true);
             try {
             	// orgCode编码长度
-            	int codeLength = YouBianCodeUtil.zhanweiLength;
+            	int codeLength = YouBianCodeUtil.ZHANWEI_LENGTH;
                 listSysDeparts = ExcelImportUtil.importExcel(file.getInputStream(), SysDepart.class, params);
                 //按长度排序
                 Collections.sort(listSysDeparts, new Comparator<SysDepart>() {
@@ -476,7 +477,7 @@ public class SysDepartController {
 	public Result<Map<String,Object>> queryTreeByKeyWord(@RequestParam(name = "keyWord", required = false) String keyWord) {
 		Result<Map<String,Object>> result = new Result<>();
 		try {
-			Map<String,Object> map=new HashMap<String,Object>();
+			Map<String,Object> map=new HashMap(5);
 			List<SysDepartTreeModel> list = sysDepartService.queryTreeByKeyWord(keyWord);
 			//根据keyWord获取用户信息
 			LambdaQueryWrapper<SysUser> queryUser = new LambdaQueryWrapper<SysUser>();

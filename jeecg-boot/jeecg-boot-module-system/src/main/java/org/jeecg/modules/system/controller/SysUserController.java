@@ -42,7 +42,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -61,9 +60,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/sys/user")
 public class SysUserController {
-	@Autowired
-	private ISysBaseAPI sysBaseAPI;
-	
+
 	@Autowired
 	private ISysUserService sysUserService;
 
@@ -91,7 +88,7 @@ public class SysUserController {
     @Value("${jeecg.path.upload}")
     private String upLoadPath;
 
-    @Resource
+    @Autowired
     private BaseCommonService baseCommonService;
 
     /**
@@ -117,7 +114,13 @@ public class SysUserController {
             query.eq(SysUserDepart::getDepId,departId);
             List<SysUserDepart> list = sysUserDepartService.list(query);
             List<String> userIds = list.stream().map(SysUserDepart::getUserId).collect(Collectors.toList());
-            queryWrapper.in("id",userIds);
+            //update-begin---author:wangshuai ---date:20220322  for：[issues/I4XTYB]查询用户时，当部门id 下没有分配用户时接口报错------------
+            if(oConvertUtils.listIsNotEmpty(userIds)){
+                queryWrapper.in("id",userIds);
+            }else{
+                return Result.OK();
+            }
+            //update-end---author:wangshuai ---date:20220322  for：[issues/I4XTYB]查询用户时，当部门id 下没有分配用户时接口报错------------
         }
         //用户ID
         String code = req.getParameter("code");
@@ -155,8 +158,8 @@ public class SysUserController {
 		return result;
 	}
 
-    //@RequiresRoles({"admin"})
-    //@RequiresPermissions("user:add")
+    @RequiresRoles({"admin"})
+    @RequiresPermissions("user:add")
 	@RequestMapping(value = "/add", method = RequestMethod.POST)
 	public Result<SysUser> add(@RequestBody JSONObject jsonObject) {
 		Result<SysUser> result = new Result<SysUser>();
@@ -173,6 +176,7 @@ public class SysUserController {
 			user.setDelFlag(CommonConstant.DEL_FLAG_0);
 			// 保存用户走一个service 保证事务
 			sysUserService.saveUser(user, selectedRoles, selectedDeparts);
+            baseCommonService.addLog("添加用户，username： " +user.getUsername() ,CommonConstant.LOG_TYPE_2, 2);
 			result.success("添加成功！");
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
@@ -181,14 +185,14 @@ public class SysUserController {
 		return result;
 	}
 
-    //@RequiresRoles({"admin"})
-    //@RequiresPermissions("user:edit")
+    @RequiresRoles({"admin"})
+    @RequiresPermissions("user:edit")
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<SysUser> edit(@RequestBody JSONObject jsonObject) {
 		Result<SysUser> result = new Result<SysUser>();
 		try {
 			SysUser sysUser = sysUserService.getById(jsonObject.getString("id"));
-			baseCommonService.addLog("编辑用户，id： " +jsonObject.getString("id") ,CommonConstant.LOG_TYPE_2, 2);
+			baseCommonService.addLog("编辑用户，username： " +sysUser.getUsername() ,CommonConstant.LOG_TYPE_2, 2);
 			if(sysUser==null) {
 				result.error500("未找到对应实体");
 			}else {
@@ -216,7 +220,7 @@ public class SysUserController {
 	/**
 	 * 删除用户
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/delete", method = RequestMethod.DELETE)
 	public Result<?> delete(@RequestParam(name="id",required=true) String id) {
 		baseCommonService.addLog("删除用户，id： " +id ,CommonConstant.LOG_TYPE_2, 3);
@@ -227,7 +231,7 @@ public class SysUserController {
 	/**
 	 * 批量删除用户
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/deleteBatch", method = RequestMethod.DELETE)
 	public Result<?> deleteBatch(@RequestParam(name="ids",required=true) String ids) {
 		baseCommonService.addLog("批量删除用户， ids： " +ids ,CommonConstant.LOG_TYPE_2, 3);
@@ -240,7 +244,7 @@ public class SysUserController {
 	 * @param jsonObject
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/frozenBatch", method = RequestMethod.PUT)
 	public Result<SysUser> frozenBatch(@RequestBody JSONObject jsonObject) {
 		Result<SysUser> result = new Result<SysUser>();
@@ -328,7 +332,7 @@ public class SysUserController {
     /**
      * 修改密码
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/changePassword", method = RequestMethod.PUT)
     public Result<?> changePassword(@RequestBody SysUser sysUser) {
         SysUser u = this.sysUserService.getOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, sysUser.getUsername()));
@@ -336,6 +340,10 @@ public class SysUserController {
             return Result.error("用户不存在！");
         }
         sysUser.setId(u.getId());
+        //update-begin---author:wangshuai ---date:20220316  for：[VUEN-234]修改密码添加敏感日志------------
+        LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+        baseCommonService.addLog("修改用户 "+sysUser.getUsername()+" 的密码，操作人： " +loginUser.getUsername() ,CommonConstant.LOG_TYPE_2, 2);
+        //update-end---author:wangshuai ---date:20220316  for：[VUEN-234]修改密码添加敏感日志------------
         return sysUserService.changePassword(sysUser);
     }
 
@@ -474,8 +482,8 @@ public class SysUserController {
      * @param response
      * @return
      */
-    //@RequiresRoles({"admin"})
-    //@RequiresPermissions("user:import")
+    @RequiresRoles({"admin"})
+    @RequiresPermissions("user:import")
     @RequestMapping(value = "/importExcel", method = RequestMethod.POST)
     public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response)throws IOException {
         MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
@@ -571,7 +579,7 @@ public class SysUserController {
 	/**
 	 * 首页用户重置密码
 	 */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/updatePassword", method = RequestMethod.PUT)
 	public Result<?> updatePassword(@RequestBody JSONObject json) {
 		String username = json.getString("username");
@@ -586,6 +594,10 @@ public class SysUserController {
 		if(user==null) {
 			return Result.error("用户不存在！");
 		}
+        //update-begin---author:wangshuai ---date:20220316  for：[VUEN-234]修改密码添加敏感日志------------
+        LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+        baseCommonService.addLog("修改密码，username： " +loginUser.getUsername() ,CommonConstant.LOG_TYPE_2, 2);
+        //update-end---author:wangshuai ---date:20220316  for：[VUEN-234]修改密码添加敏感日志------------
 		return sysUserService.resetPassword(username,oldpassword,password,confirmpassword);
 	}
 
@@ -608,7 +620,7 @@ public class SysUserController {
      * @param
      * @return
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/addSysUserRole", method = RequestMethod.POST)
     public Result<String> addSysUserRole(@RequestBody SysUserRoleVO sysUserRoleVO) {
         Result<String> result = new Result<String>();
@@ -639,7 +651,7 @@ public class SysUserController {
      * @param
      * @return
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserRole", method = RequestMethod.DELETE)
     public Result<SysUserRole> deleteUserRole(@RequestParam(name="roleId") String roleId,
                                                     @RequestParam(name="userId",required=true) String userId
@@ -663,7 +675,7 @@ public class SysUserController {
      * @param
      * @return
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserRoleBatch", method = RequestMethod.DELETE)
     public Result<SysUserRole> deleteUserRoleBatch(
             @RequestParam(name="roleId") String roleId,
@@ -790,7 +802,7 @@ public class SysUserController {
     /**
      * 给指定部门添加对应的用户
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/editSysDepartWithUser", method = RequestMethod.POST)
     public Result<String> editSysDepartWithUser(@RequestBody SysDepartUsersVO sysDepartUsersVO) {
         Result<String> result = new Result<String>();
@@ -819,7 +831,7 @@ public class SysUserController {
     /**
      *   删除指定机构的用户关系
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserInDepart", method = RequestMethod.DELETE)
     public Result<SysUserDepart> deleteUserInDepart(@RequestParam(name="depId") String depId,
                                                     @RequestParam(name="userId",required=true) String userId
@@ -851,7 +863,7 @@ public class SysUserController {
     /**
      * 批量删除指定机构的用户关系
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserInDepartBatch", method = RequestMethod.DELETE)
     public Result<SysUserDepart> deleteUserInDepartBatch(
             @RequestParam(name="depId") String depId,
@@ -882,7 +894,7 @@ public class SysUserController {
         try {
         	LoginUser sysUser = (LoginUser)SecurityUtils.getSubject().getPrincipal();
             List<SysDepart> list = this.sysDepartService.queryUserDeparts(sysUser.getId());
-            Map<String,Object> map = new HashMap<String,Object>();
+            Map<String,Object> map = new HashMap(5);
             map.put("list", list);
             map.put("orgCode", sysUser.getOrgCode());
             result.setSuccess(true);
@@ -1030,7 +1042,7 @@ public class SysUserController {
 		LambdaQueryWrapper<SysUser> query = new LambdaQueryWrapper<>();
         query.eq(SysUser::getPhone,phone);
         SysUser user = sysUserService.getOne(query);
-        Map<String,String> map = new HashMap<>();
+        Map<String,String> map = new HashMap(5);
         map.put("smscode",smscode);
         map.put("username",user.getUsername());
         result.setResult(map);
@@ -1076,6 +1088,9 @@ public class SysUserController {
             String passwordEncode = PasswordUtil.encrypt(sysUser.getUsername(), password, salt);
             sysUser.setPassword(passwordEncode);
             this.sysUserService.updateById(sysUser);
+            //update-begin---author:wangshuai ---date:20220316  for：[VUEN-234]密码重置添加敏感日志------------
+            baseCommonService.addLog("重置 "+username+" 的密码，操作人： " +sysUser.getUsername() ,CommonConstant.LOG_TYPE_2, 2);
+            //update-end---author:wangshuai ---date:20220316  for：[VUEN-234]密码重置添加敏感日志------------
             result.setSuccess(true);
             result.setMessage("密码重置完成！");
             return result;
@@ -1200,7 +1215,7 @@ public class SysUserController {
      * @param userIds 被删除的用户ID，多个id用半角逗号分割
      * @return
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteRecycleBin", method = RequestMethod.DELETE)
     public Result deleteRecycleBin(@RequestParam("userIds") String userIds) {
         if (StringUtils.isNotBlank(userIds)) {
@@ -1297,7 +1312,7 @@ public class SysUserController {
     @GetMapping("/queryChildrenByUsername")
     public Result queryChildrenByUsername(@RequestParam("userId") String userId) {
         //获取用户信息
-        Map<String,Object> map=new HashMap<String,Object>();
+        Map<String,Object> map=new HashMap(5);
         SysUser sysUser = sysUserService.getById(userId);
         String username = sysUser.getUsername();
         Integer identity = sysUser.getUserIdentity();

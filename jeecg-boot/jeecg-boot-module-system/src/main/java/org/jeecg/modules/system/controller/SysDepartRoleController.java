@@ -2,6 +2,7 @@ package org.jeecg.modules.system.controller;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -15,6 +16,7 @@ import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.common.aspect.annotation.AutoLog;
 import org.jeecg.common.system.vo.LoginUser;
 import org.jeecg.common.util.oConvertUtils;
+import org.jeecg.modules.base.service.BaseCommonService;
 import org.jeecg.modules.system.entity.*;
 import org.jeecg.modules.system.service.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -54,7 +56,10 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 
 	 @Autowired
 	 private ISysDepartService sysDepartService;
-	
+
+	 @Autowired
+     private BaseCommonService baseCommonService;
+     
 	/**
 	 * 分页列表查询
 	 *
@@ -98,7 +103,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param sysDepartRole
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@ApiOperation(value="部门角色-添加", notes="部门角色-添加")
 	@PostMapping(value = "/add")
 	public Result<?> add(@RequestBody SysDepartRole sysDepartRole) {
@@ -112,7 +117,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param sysDepartRole
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@ApiOperation(value="部门角色-编辑", notes="部门角色-编辑")
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<?> edit(@RequestBody SysDepartRole sysDepartRole) {
@@ -126,7 +131,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param id
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@AutoLog(value = "部门角色-通过id删除")
 	@ApiOperation(value="部门角色-通过id删除", notes="部门角色-通过id删除")
 	@DeleteMapping(value = "/delete")
@@ -141,7 +146,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param ids
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@AutoLog(value = "部门角色-批量删除")
 	@ApiOperation(value="部门角色-批量删除", notes="部门角色-批量删除")
 	@DeleteMapping(value = "/deleteBatch")
@@ -183,14 +188,18 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	  * @param json
 	  * @return
 	  */
-	 //@RequiresRoles({"admin"})
+	 @RequiresRoles({"admin"})
 	 @RequestMapping(value = "/deptRoleUserAdd", method = RequestMethod.POST)
 	 public Result<?> deptRoleAdd(@RequestBody JSONObject json) {
 		 String newRoleId = json.getString("newRoleId");
 		 String oldRoleId = json.getString("oldRoleId");
 		 String userId = json.getString("userId");
 		 departRoleUserService.deptRoleUserAdd(userId,newRoleId,oldRoleId);
-		 return Result.ok("添加成功！");
+         //update-begin---author:wangshuai ---date:20220316  for：[VUEN-234]部门角色分配添加敏感日志------------
+         LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+         baseCommonService.addLog("给部门用户ID："+userId+"分配角色，操作人： " +loginUser.getUsername() ,CommonConstant.LOG_TYPE_2, 2);
+         //update-end---author:wangshuai ---date:20220316  for：[VUEN-234]部门角色分配添加敏感日志------------
+         return Result.ok("添加成功！");
 	 }
 
 	 /**
@@ -224,7 +233,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 		 if(list==null || list.size()==0) {
 			 return Result.error("未找到权限配置信息");
 		 }else {
-			 Map<String,Object> map = new HashMap<>();
+			 Map<String,Object> map = new HashMap(5);
 			 map.put("datarule", list);
 			 LambdaQueryWrapper<SysDepartRolePermission> query = new LambdaQueryWrapper<SysDepartRolePermission>()
 					 .eq(SysDepartRolePermission::getPermissionId, permissionId)

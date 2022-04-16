@@ -67,7 +67,7 @@ public class SysGatewayRouteController extends JeecgController<SysGatewayRoute, 
      * @param id
      * @return
      */
-    //@RequiresRoles({"admin"})
+    @RequiresRoles({"admin"})
     @RequestMapping(value = "/delete", method = RequestMethod.DELETE)
     public Result<?> delete(@RequestParam(name = "id", required = true) String id) {
         sysGatewayRouteService.deleteById(id);

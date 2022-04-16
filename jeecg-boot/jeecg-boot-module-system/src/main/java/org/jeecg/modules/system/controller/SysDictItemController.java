@@ -7,6 +7,7 @@ import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresRoles;
@@ -38,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
  * @Author zhangweijian
  * @since 2018-12-28
  */
+@Api(tags = "数据字典")
 @RestController
 @RequestMapping("/sys/dictItem")
 @Slf4j
@@ -71,7 +73,7 @@ public class SysDictItemController {
 	 * @功能：新增
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/add", method = RequestMethod.POST)
 	@CacheEvict(value= {CacheConstant.SYS_DICT_CACHE, CacheConstant.SYS_ENABLE_DICT_CACHE}, allEntries=true)
 	public Result<SysDictItem> add(@RequestBody SysDictItem sysDictItem) {
@@ -92,7 +94,7 @@ public class SysDictItemController {
 	 * @param sysDictItem
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/edit",  method = { RequestMethod.PUT,RequestMethod.POST })
 	@CacheEvict(value={CacheConstant.SYS_DICT_CACHE, CacheConstant.SYS_ENABLE_DICT_CACHE}, allEntries=true)
 	public Result<SysDictItem> edit(@RequestBody SysDictItem sysDictItem) {
@@ -116,7 +118,7 @@ public class SysDictItemController {
 	 * @param id
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/delete", method = RequestMethod.DELETE)
 	@CacheEvict(value={CacheConstant.SYS_DICT_CACHE, CacheConstant.SYS_ENABLE_DICT_CACHE}, allEntries=true)
 	public Result<SysDictItem> delete(@RequestParam(name="id",required=true) String id) {
@@ -138,7 +140,7 @@ public class SysDictItemController {
 	 * @param ids
 	 * @return
 	 */
-	//@RequiresRoles({"admin"})
+	@RequiresRoles({"admin"})
 	@RequestMapping(value = "/deleteBatch", method = RequestMethod.DELETE)
 	@CacheEvict(value={CacheConstant.SYS_DICT_CACHE, CacheConstant.SYS_ENABLE_DICT_CACHE}, allEntries=true)
 	public Result<SysDictItem> deleteBatch(@RequestParam(name="ids",required=true) String ids) {
@@ -161,7 +163,7 @@ public class SysDictItemController {
 	@RequestMapping(value = "/dictItemCheck", method = RequestMethod.GET)
 	@ApiOperation("字典重复校验接口")
 	public Result<Object> doDictItemCheck(SysDictItem sysDictItem, HttpServletRequest request) {
-		int num = 0;
+		Long num = Long.valueOf(0);
 		LambdaQueryWrapper<SysDictItem> queryWrapper = new LambdaQueryWrapper<SysDictItem>();
 		queryWrapper.eq(SysDictItem::getItemValue,sysDictItem.getItemValue());
 		queryWrapper.eq(SysDictItem::getDictId,sysDictItem.getDictId());
