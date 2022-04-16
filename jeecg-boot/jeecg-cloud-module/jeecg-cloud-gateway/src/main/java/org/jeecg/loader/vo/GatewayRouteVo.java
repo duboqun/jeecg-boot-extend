@@ -1,4 +1,4 @@
-package org.jeecg.loader;
+package org.jeecg.loader.vo;
 
 import lombok.Data;
 

@@ -1,4 +1,4 @@
-package org.jeecg.handler;
+package org.jeecg.handler.swagger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
