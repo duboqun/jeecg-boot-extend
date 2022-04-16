@@ -29,12 +29,12 @@ import lombok.extern.slf4j.Slf4j;
  */
 @SpringBootApplication
 @Slf4j
-public class JeecgSentinelDashboardApplication {
+public class JeecgSentinelApplication {
 
     public static void main(String[] args) {
         System.setProperty("csp.sentinel.app.type", "1");
         triggerSentinelInit();
-        ConfigurableApplicationContext application = SpringApplication.run(JeecgSentinelDashboardApplication.class, args);
+        ConfigurableApplicationContext application = SpringApplication.run(JeecgSentinelApplication.class, args);
         Environment env = application.getEnvironment();
         String port = env.getProperty("server.port");
         log.info("\n----------------------------------------------------------\n\t" +
