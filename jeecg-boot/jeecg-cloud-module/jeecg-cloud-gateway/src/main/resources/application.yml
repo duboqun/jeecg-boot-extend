@@ -96,15 +96,6 @@ spring:
 #        connect-timeout: 1000
 #        response-timeout: 5s
 #      # Nacos的yml方式路由配置(默认注释掉，采用数据库加载)
-#      routes:
-##        - id: jeecg-eoa
-##          uri: lb://jeecg-eoa
-##          predicates:
-##            - Path=/eoa/**,/v1/**,/generic/**
-##        - id: jeecg-joa
-##          uri: lb://jeecg-joa
-##          predicates:
-##            - Path=/desflow/**,/joa/**,/desform/**,/act/**,/plug-in/**
 #        - id: jeecg-demo
 #          uri: lb://jeecg-demo
 #          predicates:
