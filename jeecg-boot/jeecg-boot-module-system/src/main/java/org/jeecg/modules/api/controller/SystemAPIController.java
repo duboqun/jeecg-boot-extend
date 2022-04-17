@@ -166,7 +166,7 @@ public class SystemAPIController {
 //            e.printStackTrace();
 //        }
 
-        log.info("--微服务接口被调用--");
+        log.info("--我是jeecg-system服务节点，微服务接口queryAllDict被调用--");
         return sysBaseApi.queryAllDict();
     }
 
