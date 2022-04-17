@@ -30,9 +30,9 @@ public interface ServiceNameConstants {
 	 */
 	String SERVICE_SYSTEM = "jeecg-system";
 	/**
-	 * 微服务名：online在线模块
+	 * 微服务名：Demo模块
 	 */
-	String SERVICE_ONLINE = "jeecg-online";
+	String SERVICE_DEMO = "jeecg-demo";
 
 	/**
 	 * gateway通过header传递根路径 basePath
