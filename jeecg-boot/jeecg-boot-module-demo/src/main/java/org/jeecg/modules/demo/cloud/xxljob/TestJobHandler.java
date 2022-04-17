@@ -1,5 +1,5 @@
 //
-//package org.jeecg.modules.demo.xxljob;
+//package org.jeecg.modules.demo.cloud.xxljob;
 //
 //import com.xxl.job.core.biz.model.ReturnT;
 //import com.xxl.job.core.handler.annotation.XxlJob;
@@ -17,8 +17,8 @@
 ///**
 // * xxl-job定时任务测试
 // */
-//@Component
 //@Slf4j
+//@Component
 //public class TestJobHandler {
 //    @Autowired
 //    ISysBaseAPI sysBaseApi;

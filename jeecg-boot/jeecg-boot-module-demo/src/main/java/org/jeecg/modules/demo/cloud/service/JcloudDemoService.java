@@ -13,5 +13,5 @@ public interface JcloudDemoService {
      * @param name 姓名
      * @return "Hello，" + name
      */
-    Result<String> getMessage(String name);
+    String getMessage(String name);
 }

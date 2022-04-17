@@ -18,10 +18,10 @@
 // *
 // */
 //@Slf4j
-//@Api(tags = "Cloud示例")
+//@Api(tags = "【微服务】单元测试")
 //@RestController
 //@RequestMapping("/test")
-//public class JcloudDemoController {
+//public class JcloudDemoFeignController {
 //    @Resource
 //    private ISysBaseAPI sysBaseApi;
 ////    @Autowired
@@ -32,10 +32,10 @@
 //     *
 //     * @return
 //     */
-//    @GetMapping("/remote")
-//    @SentinelResource(value = "remoteDict",fallback = "getDefaultHandler")
-//    @ApiOperation(value = "测试feign", notes = "测试feign")
-//    public Result remoteDict() {
+//    @GetMapping("/callSystem")
+//    //@SentinelResource(value = "remoteDict",fallback = "getDefaultHandler")
+//    @ApiOperation(value = "通过feign调用system服务", notes = "测试jeecg-demo服务，是否通过fegin调用system服务接口")
+//    public Result getRemoteDict() {
 //        List<DictModel> list = sysBaseApi.queryAllDict();
 //        return Result.OK(list);
 //    }
@@ -47,9 +47,9 @@
 ////     *  http://doc.jeecg.com/2194069
 ////     * @return
 ////     */
-////    @GetMapping("/remoteErp")
+////    @GetMapping("/callErp")
 ////    @ApiOperation(value = "测试feign erp", notes = "测试feign erp")
-////    public Result remoteCrm() {
+////    public Result callErp() {
 ////        log.info("call erp 服务");
 ////        String res = erpHelloApi.callHello();
 ////        return Result.OK(res);
@@ -62,8 +62,7 @@
 //     */
 //    public Result<Object> getDefaultHandler() {
 //        log.info("测试JcloudDemoController-remoteDict 熔断降级");
-//        return Result.OK("测试JcloudDemoController-remoteDict 熔断降级");
+//        return Result.error("测试JcloudDemoController-remoteDict 熔断降级");
 //    }
-//
 //
 //}
