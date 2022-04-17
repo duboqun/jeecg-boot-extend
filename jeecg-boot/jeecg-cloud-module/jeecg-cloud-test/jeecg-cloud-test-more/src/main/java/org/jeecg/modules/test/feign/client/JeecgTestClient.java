@@ -2,6 +2,7 @@ package org.jeecg.modules.test.feign.client;
 
 import org.jeecg.common.api.vo.Result;
 
+import org.jeecg.common.constant.ServiceNameConstants;
 import org.jeecg.config.FeignConfig;
 import org.jeecg.modules.test.constant.CloudConstant;
 import org.jeecg.modules.test.feign.factory.JeecgTestClientFactory;
@@ -15,10 +16,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 /**
  * 常规feign接口定义
  */
-@FeignClient(value = CloudConstant.SERVER_NAME_JEECGDEMO, configuration = FeignConfig.class,fallbackFactory = JeecgTestClientFactory.class)
+@FeignClient(value = ServiceNameConstants.SERVICE_DEMO, configuration = FeignConfig.class,fallbackFactory = JeecgTestClientFactory.class)
 @Component
 public interface JeecgTestClient {
 
     @GetMapping(value = "/test/getMessage")
-    Result<Object> getMessage(@RequestParam(value = "name",required = false) String name);
+    String getMessage(@RequestParam(value = "name",required = false) String name);
 }

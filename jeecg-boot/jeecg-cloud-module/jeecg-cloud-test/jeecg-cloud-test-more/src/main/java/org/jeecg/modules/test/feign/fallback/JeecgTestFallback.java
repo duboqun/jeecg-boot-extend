@@ -19,7 +19,7 @@ public class JeecgTestFallback implements JeecgTestClient {
 
 
     @Override
-    public Result<Object> getMessage(String name) {
-        return Result.OK("访问超时, 自定义FallbackFactory");
+    public String getMessage(String name) {
+        return "访问超时, 自定义FallbackFactory";
     }
 }

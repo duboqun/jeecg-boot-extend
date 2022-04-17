@@ -21,17 +21,20 @@ public class JeecgTestFeignController {
 
     @Autowired
     private JeecgTestClient jeecgTestClient;
-//    @Autowired
-//    private RabbitMqClient rabbitMqClient;
-//     @Autowired
-//    private JeecgFeignService jeecgFeignService;
 
+    /**
+     * 熔断： fallbackFactory优先于 @SentinelResource
+     *
+     * @param name
+     * @return
+     */
     @GetMapping("/getMessage")
-    @ApiOperation(value = "测试feign", notes = "测试feign")
+    @ApiOperation(value = "测试feign调用demo服务1", notes = "测试feign @SentinelResource熔断写法 | 测试熔断关闭jeecg-demo服务")
     @SentinelResource(value = "test_more_getMessage", fallback = "getDefaultUser")
-    public Result<Object> getMessage(@RequestParam(value = "name", required = false) String name) {
+    public Result<String> getMessage(@RequestParam(value = "name", required = false) String name) {
         log.info("---------Feign fallbackFactory优先级高于@SentinelResource-----------------");
-        return jeecgTestClient.getMessage("fegin——jeecg-boot1");
+        String resultMsg = jeecgTestClient.getMessage(" I am jeecg-system 服务节点，呼叫 jeecg-demo!");
+        return Result.OK(null, resultMsg);
     }
 
     /**
@@ -41,19 +44,13 @@ public class JeecgTestFeignController {
      * @return
      */
     @GetMapping("/getMessage2")
-    @ApiOperation(value = "测试feign2", notes = "测试feign2")
-    public Result<Object> getMessage2(@RequestParam(value = "name", required = false) String name) {
+    @ApiOperation(value = "测试feign调用demo服务2", notes = "测试feign fallbackFactory熔断写法 | 测试熔断关闭jeecg-demo服务")
+    public Result<String> getMessage2(@RequestParam(value = "name", required = false) String name) {
         log.info("---------测试 Feign fallbackFactory-----------------");
-        return jeecgTestClient.getMessage("fegin——jeecg-boot2");
+        String resultMsg = jeecgTestClient.getMessage(" I am jeecg-system 服务节点，呼叫 jeecg-demo!");
+        return Result.OK(null, resultMsg);
     }
 
-
-//    @GetMapping("getMessage2")
-//    @ApiOperation(value = "测试动态feign", notes = "测试动态feign")
-//    public Result<String> getMessage2() {
-//        JeecgTestClientDyn myClientDyn = jeecgFeignService.newInstance(JeecgTestClientDyn.class, CloudConstant.SERVER_NAME_JEECGDEMO);
-//        return myClientDyn.getMessage("动态fegin——jeecg-boot2");
-//    }
 
     @GetMapping("/fallback")
     @ApiOperation(value = "测试熔断", notes = "测试熔断")
@@ -73,6 +70,6 @@ public class JeecgTestFeignController {
      */
     public Result<Object> getDefaultUser(String name) {
         log.info("熔断，默认回调函数");
-        return Result.OK("访问超时, 自定义 @SentinelResource Fallback");
+        return Result.error(null, "访问超时, 自定义 @SentinelResource Fallback");
     }
 }
