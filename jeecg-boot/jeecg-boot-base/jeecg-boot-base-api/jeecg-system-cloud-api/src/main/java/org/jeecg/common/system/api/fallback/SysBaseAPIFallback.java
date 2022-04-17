@@ -223,7 +223,7 @@ public class SysBaseAPIFallback implements ISysBaseAPI {
 
     @Override
     public LoginUser getUserByName(String username) {
-        log.error("通过用户名获取当前登录用户信息 {}", cause);
+        log.error("jeecg-system服务节点不通，导致获取登录用户信息失败： " + cause.getMessage(), cause);
         return null;
     }
 
