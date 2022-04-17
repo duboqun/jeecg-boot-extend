@@ -15,6 +15,7 @@ import org.jeecg.common.system.util.JwtUtil;
 import org.jeecg.common.system.vo.LoginUser;
 import org.jeecg.common.util.RedisUtil;
 import org.jeecg.common.util.SpringContextUtils;
+import org.jeecg.common.util.TokenUtils;
 import org.jeecg.common.util.oConvertUtils;
 import org.jeecg.config.mybatis.TenantContext;
 import org.springframework.context.annotation.Lazy;
@@ -122,7 +123,8 @@ public class ShiroRealm extends AuthorizingRealm {
 
         // 查询用户信息
         log.debug("———校验token是否有效————checkUserTokenIsEffect——————— "+ token);
-        LoginUser loginUser = commonApi.getUserByName(username);
+        LoginUser loginUser = TokenUtils.getLoginUser(username,commonApi,redisUtil);
+        //LoginUser loginUser = commonApi.getUserByName(username);
         if (loginUser == null) {
             throw new AuthenticationException("用户不存在!");
         }

@@ -3,6 +3,7 @@ package org.jeecg.common.util;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.jeecg.common.api.CommonAPI;
+import org.jeecg.common.constant.CacheConstant;
 import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.exception.JeecgBoot401Exception;
 import org.jeecg.common.system.util.JwtUtil;
@@ -38,31 +39,7 @@ public class TokenUtils {
     public static boolean verifyToken(HttpServletRequest request, CommonAPI commonApi, RedisUtil redisUtil) {
         log.debug(" -- url --" + request.getRequestURL());
         String token = getTokenByRequest(request);
-
-        if (StringUtils.isBlank(token)) {
-            throw new JeecgBoot401Exception("Token不能为空!");
-        }
-
-        // 解密获得username，用于和数据库进行对比
-        String username = JwtUtil.getUsername(token);
-        if (username == null) {
-            throw new JeecgBoot401Exception("Token非法无效!");
-        }
-
-        // 查询用户信息
-        LoginUser user = commonApi.getUserByName(username);
-        if (user == null) {
-            throw new JeecgBoot401Exception("用户不存在!");
-        }
-        // 判断用户状态
-        if (user.getStatus() != 1) {
-            throw new JeecgBoot401Exception("账号已锁定,请联系管理员!");
-        }
-        // 校验token是否超时失效 & 或者账号密码是否错误
-        if (!jwtTokenRefresh(token, username, user.getPassword(), redisUtil)) {
-            throw new JeecgBoot401Exception("Token失效，请重新登录");
-        }
-        return true;
+        return TokenUtils.verifyToken(token, commonApi, redisUtil);
     }
 
     /**
@@ -80,7 +57,8 @@ public class TokenUtils {
         }
 
         // 查询用户信息
-        LoginUser user = commonApi.getUserByName(username);
+        LoginUser user = TokenUtils.getLoginUser(username, commonApi, redisUtil);
+        //LoginUser user = commonApi.getUserByName(username);
         if (user == null) {
             throw new JeecgBoot401Exception("用户不存在!");
         }
@@ -113,16 +91,27 @@ public class TokenUtils {
                 redisUtil.set(CommonConstant.PREFIX_USER_TOKEN + token, newAuthorization);
                 redisUtil.expire(CommonConstant.PREFIX_USER_TOKEN + token, JwtUtil.EXPIRE_TIME * 2 / 1000);
             }
-            //update-begin--Author:scott  Date:20191005  for：解决每次请求，都重写redis中 token缓存问题
-//            else {
-//                redisUtil.set(CommonConstant.PREFIX_USER_TOKEN + token, cacheToken);
-//                // 设置超时时间
-//                redisUtil.expire(CommonConstant.PREFIX_USER_TOKEN + token, JwtUtil.EXPIRE_TIME / 1000);
-//            }
-            //update-end--Author:scott  Date:20191005  for：解决每次请求，都重写redis中 token缓存问题
             return true;
         }
         return false;
     }
 
+    /**
+     * 获取登录用户
+     *
+     * @param commonApi
+     * @param username
+     * @return
+     */
+    public static LoginUser getLoginUser(String username, CommonAPI commonApi, RedisUtil redisUtil) {
+        LoginUser loginUser = null;
+        String loginUserKey = CacheConstant.SYS_USERS_CACHE + "::" + username;
+        if(redisUtil.hasKey(loginUserKey)){
+            loginUser = (LoginUser) redisUtil.get(loginUserKey);
+        }else{
+            // 查询用户信息
+            loginUser = commonApi.getUserByName(username);
+        }
+        return loginUser;
+    }
 }
