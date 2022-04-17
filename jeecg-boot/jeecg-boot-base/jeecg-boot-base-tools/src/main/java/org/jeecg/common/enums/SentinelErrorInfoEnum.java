@@ -93,6 +93,10 @@ public enum SentinelErrorInfoEnum {
      * @return String 错误信息
      */
     public static SentinelErrorInfoEnum getErrorByException(Throwable throwable) {
+        if(throwable==null){
+            return null;
+        }
+
         String exceptionClass=throwable.getClass().getSimpleName();
         for (SentinelErrorInfoEnum e : SentinelErrorInfoEnum.values()) {
             if (exceptionClass.equals(e.name())) {
