@@ -103,7 +103,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param sysDepartRole
 	 * @return
 	 */
-	@RequiresRoles({"admin"})
+	//@RequiresRoles({"admin"})
 	@ApiOperation(value="部门角色-添加", notes="部门角色-添加")
 	@PostMapping(value = "/add")
 	public Result<?> add(@RequestBody SysDepartRole sysDepartRole) {
@@ -117,7 +117,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param sysDepartRole
 	 * @return
 	 */
-	@RequiresRoles({"admin"})
+	//@RequiresRoles({"admin"})
 	@ApiOperation(value="部门角色-编辑", notes="部门角色-编辑")
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<?> edit(@RequestBody SysDepartRole sysDepartRole) {
@@ -131,7 +131,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param id
 	 * @return
 	 */
-	@RequiresRoles({"admin"})
+	//@RequiresRoles({"admin"})
 	@AutoLog(value = "部门角色-通过id删除")
 	@ApiOperation(value="部门角色-通过id删除", notes="部门角色-通过id删除")
 	@DeleteMapping(value = "/delete")
@@ -146,7 +146,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	 * @param ids
 	 * @return
 	 */
-	@RequiresRoles({"admin"})
+	//@RequiresRoles({"admin"})
 	@AutoLog(value = "部门角色-批量删除")
 	@ApiOperation(value="部门角色-批量删除", notes="部门角色-批量删除")
 	@DeleteMapping(value = "/deleteBatch")
@@ -188,7 +188,7 @@ public class SysDepartRoleController extends JeecgController<SysDepartRole, ISys
 	  * @param json
 	  * @return
 	  */
-	 @RequiresRoles({"admin"})
+	 //@RequiresRoles({"admin"})
 	 @RequestMapping(value = "/deptRoleUserAdd", method = RequestMethod.POST)
 	 public Result<?> deptRoleAdd(@RequestBody JSONObject json) {
 		 String newRoleId = json.getString("newRoleId");

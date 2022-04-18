@@ -158,8 +158,8 @@ public class SysUserController {
 		return result;
 	}
 
-    @RequiresRoles({"admin"})
-    @RequiresPermissions("user:add")
+    //@RequiresRoles({"admin"})
+    //@RequiresPermissions("user:add")
 	@RequestMapping(value = "/add", method = RequestMethod.POST)
 	public Result<SysUser> add(@RequestBody JSONObject jsonObject) {
 		Result<SysUser> result = new Result<SysUser>();
@@ -185,8 +185,8 @@ public class SysUserController {
 		return result;
 	}
 
-    @RequiresRoles({"admin"})
-    @RequiresPermissions("user:edit")
+    //@RequiresRoles({"admin"})
+    //@RequiresPermissions("user:edit")
 	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<SysUser> edit(@RequestBody JSONObject jsonObject) {
 		Result<SysUser> result = new Result<SysUser>();
@@ -220,7 +220,7 @@ public class SysUserController {
 	/**
 	 * 删除用户
 	 */
-	@RequiresRoles({"admin"})
+	//@RequiresRoles({"admin"})
 	@RequestMapping(value = "/delete", method = RequestMethod.DELETE)
 	public Result<?> delete(@RequestParam(name="id",required=true) String id) {
 		baseCommonService.addLog("删除用户，id： " +id ,CommonConstant.LOG_TYPE_2, 3);
@@ -231,7 +231,7 @@ public class SysUserController {
 	/**
 	 * 批量删除用户
 	 */
-	@RequiresRoles({"admin"})
+	//@RequiresRoles({"admin"})
 	@RequestMapping(value = "/deleteBatch", method = RequestMethod.DELETE)
 	public Result<?> deleteBatch(@RequestParam(name="ids",required=true) String ids) {
 		baseCommonService.addLog("批量删除用户， ids： " +ids ,CommonConstant.LOG_TYPE_2, 3);
@@ -244,7 +244,7 @@ public class SysUserController {
 	 * @param jsonObject
 	 * @return
 	 */
-	@RequiresRoles({"admin"})
+	//@RequiresRoles({"admin"})
 	@RequestMapping(value = "/frozenBatch", method = RequestMethod.PUT)
 	public Result<SysUser> frozenBatch(@RequestBody JSONObject jsonObject) {
 		Result<SysUser> result = new Result<SysUser>();
@@ -332,7 +332,7 @@ public class SysUserController {
     /**
      * 修改密码
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/changePassword", method = RequestMethod.PUT)
     public Result<?> changePassword(@RequestBody SysUser sysUser) {
         SysUser u = this.sysUserService.getOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, sysUser.getUsername()));
@@ -482,8 +482,8 @@ public class SysUserController {
      * @param response
      * @return
      */
-    @RequiresRoles({"admin"})
-    @RequiresPermissions("user:import")
+    //@RequiresRoles({"admin"})
+    //@RequiresPermissions("user:import")
     @RequestMapping(value = "/importExcel", method = RequestMethod.POST)
     public Result<?> importExcel(HttpServletRequest request, HttpServletResponse response)throws IOException {
         MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
@@ -579,7 +579,7 @@ public class SysUserController {
 	/**
 	 * 首页用户重置密码
 	 */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/updatePassword", method = RequestMethod.PUT)
 	public Result<?> updatePassword(@RequestBody JSONObject json) {
 		String username = json.getString("username");
@@ -620,7 +620,7 @@ public class SysUserController {
      * @param
      * @return
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/addSysUserRole", method = RequestMethod.POST)
     public Result<String> addSysUserRole(@RequestBody SysUserRoleVO sysUserRoleVO) {
         Result<String> result = new Result<String>();
@@ -651,7 +651,7 @@ public class SysUserController {
      * @param
      * @return
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserRole", method = RequestMethod.DELETE)
     public Result<SysUserRole> deleteUserRole(@RequestParam(name="roleId") String roleId,
                                                     @RequestParam(name="userId",required=true) String userId
@@ -675,7 +675,7 @@ public class SysUserController {
      * @param
      * @return
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserRoleBatch", method = RequestMethod.DELETE)
     public Result<SysUserRole> deleteUserRoleBatch(
             @RequestParam(name="roleId") String roleId,
@@ -802,7 +802,7 @@ public class SysUserController {
     /**
      * 给指定部门添加对应的用户
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/editSysDepartWithUser", method = RequestMethod.POST)
     public Result<String> editSysDepartWithUser(@RequestBody SysDepartUsersVO sysDepartUsersVO) {
         Result<String> result = new Result<String>();
@@ -831,7 +831,7 @@ public class SysUserController {
     /**
      *   删除指定机构的用户关系
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserInDepart", method = RequestMethod.DELETE)
     public Result<SysUserDepart> deleteUserInDepart(@RequestParam(name="depId") String depId,
                                                     @RequestParam(name="userId",required=true) String userId
@@ -863,7 +863,7 @@ public class SysUserController {
     /**
      * 批量删除指定机构的用户关系
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteUserInDepartBatch", method = RequestMethod.DELETE)
     public Result<SysUserDepart> deleteUserInDepartBatch(
             @RequestParam(name="depId") String depId,
@@ -1215,7 +1215,7 @@ public class SysUserController {
      * @param userIds 被删除的用户ID，多个id用半角逗号分割
      * @return
      */
-    @RequiresRoles({"admin"})
+    //@RequiresRoles({"admin"})
     @RequestMapping(value = "/deleteRecycleBin", method = RequestMethod.DELETE)
     public Result deleteRecycleBin(@RequestParam("userIds") String userIds) {
         if (StringUtils.isNotBlank(userIds)) {

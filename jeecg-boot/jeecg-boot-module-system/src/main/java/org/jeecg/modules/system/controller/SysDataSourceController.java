@@ -58,7 +58,7 @@ public class SysDataSourceController extends JeecgController<SysDataSource, ISys
      */
     @AutoLog(value = "多数据源管理-分页列表查询")
     @ApiOperation(value = "多数据源管理-分页列表查询", notes = "多数据源管理-分页列表查询")
-    @RequiresRoles("admin")
+    //@RequiresRoles("admin")
     @GetMapping(value = "/list")
     public Result<?> queryPageList(
             SysDataSource sysDataSource,
