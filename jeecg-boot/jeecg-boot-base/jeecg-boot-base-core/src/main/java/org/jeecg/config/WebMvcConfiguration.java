@@ -14,7 +14,6 @@ import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilde
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -128,7 +127,6 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
      * 解决springboot2.6
      * 解决metrics端点不显示jvm信息的问题(zyf)
      */
-    @Lazy
     @Bean
     InitializingBean forcePrometheusPostProcessor(BeanPostProcessor meterRegistryPostProcessor, PrometheusMeterRegistry registry) {
         return () -> meterRegistryPostProcessor.postProcessAfterInitialization(registry, "");
