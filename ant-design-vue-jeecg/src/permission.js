@@ -54,6 +54,9 @@ router.beforeEach((to, from, next) => {
             })
           })
       } else {
+        if ( to.meta.url && to.meta.url.indexOf(":token") !== -1) {
+          to.meta.url = to.meta.url.substr(0,to.meta.url.indexOf(":token")) + Vue.ls.get(ACCESS_TOKEN);
+        }
         next()
       }
     }

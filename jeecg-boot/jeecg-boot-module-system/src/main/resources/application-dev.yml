@@ -18,6 +18,9 @@ management:
     web:
       exposure:
         include: metrics,httptrace
+  health:
+    elasticsearch:
+      enabled: false
 
 spring:
   servlet:
@@ -133,7 +136,7 @@ spring:
         master:
           url: jdbc:mysql://127.0.0.1:3306/jeecg-boot?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
           username: root
-          password: root
+          password: dongjb
           driver-class-name: com.mysql.cj.jdbc.Driver
           # 多数据源配置
           #multi-datasource1:
@@ -256,7 +259,10 @@ cas:
 #Mybatis输出sql日志
 logging:
   level:
-    org.jeecg.modules.system.mapper : info
+    org:
+      jeecg.modules.system.mapper : debug
+      jeecg.modules.activiti.mapper : debug
+#      activiti.engine.impl.persistence.entity: debug
 #swagger
 knife4j:
   production: false
@@ -312,3 +318,12 @@ third-app:
       # appSecret
       client-secret: ??
       agent-id: ??
+
+demo:
+  data:
+    elasticsearch:
+      cluster-name: mycluster
+      cluster-nodes: localhost:9200
+      index:
+        number-of-replicas: 0
+        number-of-shards: 3

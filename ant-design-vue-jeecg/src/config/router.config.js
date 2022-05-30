@@ -360,6 +360,14 @@ export const constantRouterMap = [
     ]
   },
   {
+    path: '/preview/:code',
+    component: () => import("@/views/publish/appDetail/Preview")
+  },
+  {
+    path: '/approver/:token',
+    component: () => import("@/views/flowable/admin/approver")
+  },
+  {
     path: '/404',
     component: () => import(/* webpackChunkName: "fail" */ '@/views/exception/404')
   },

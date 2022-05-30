@@ -7,6 +7,11 @@ import Storage from 'vue-ls'
 import router from './router'
 import store from './store/'
 import { VueAxios } from "@/utils/request"
+import './icons/index' // icon
+
+import ElementUI from 'element-ui'
+Vue.use( ElementUI );
+import 'element-ui/lib/theme-chalk/index.css'
 
 require('@jeecg/antd-online-mini')
 require('@jeecg/antd-online-mini/dist/OnlineForm.css')
@@ -46,6 +51,12 @@ import '@/assets/less/JAreaLinkage.less'
 import VueAreaLinkage from 'vue-area-linkage'
 import '@/components/jeecg/JVxeTable/install'
 import '@/components/JVxeCells/install'
+
+import '@/components/FormGenerator/styles/index.scss'
+import Tinymce from '@/components/FormGenerator/components/tinymce/index.vue'
+
+Vue.component('tinymce', Tinymce)
+
 //表单验证
 import { rules } from '@/utils/rules'
 Vue.prototype.rules = rules
@@ -62,6 +73,11 @@ Vue.use(vueBus);
 Vue.use(JeecgComponents);
 Vue.use(VueAreaLinkage);
 
+// 挂载全局使用的方法
+import { getAction,postFormAction ,postAction} from "@/api/manage"
+Vue.prototype.postFormAction = postFormAction;
+Vue.prototype.postDataAction = postAction;
+Vue.prototype.getAction = getAction;
 SSO.init(() => {
   main()
 })

@@ -4,13 +4,33 @@
  * data中url定义 list为查询列表  delete为删除单条记录  deleteBatch为批量删除
  */
 import { filterObj } from '@/utils/util';
-import { deleteAction, getAction,downFile,getFileAccessHttpUrl } from '@/api/manage'
+import { deleteAction, getAction, postAction, postFormAction, downFile, getFileAccessHttpUrl } from '@/api/manage'
 import Vue from 'vue'
 import { ACCESS_TOKEN, TENANT_ID } from "@/store/mutation-types"
 import store from '@/store'
 import {Modal} from 'ant-design-vue'
 
 export const JeecgListMixin = {
+  props: {
+    /*全局禁用，可表示查看*/
+    disabled: {
+      type: Boolean,
+      default: false,
+      required: false
+    },
+    /*流程数据*/
+    processData: {
+      type: Object,
+      default: () => {
+        return {}
+      },
+      required: false
+    },
+    /*是否新增*/
+    isNew: { type: Boolean, default: false, required: false },
+    /*是否处理流程*/
+    task: { type: Boolean, default: false, required: false }
+  },
   data(){
     return {
       /* 查询条件-请不要在queryParam中声明非字符串值的属性 */
@@ -53,6 +73,15 @@ export const JeecgListMixin = {
     }
   },
   created() {
+      this.queryParam.bpmId = this.processData.businessKey||this.processData.id
+      if(this.isNew) {
+        this.queryParam.bpmStatus = "1"
+        this.queryParam.bpmId = ''
+      }
+      if(this.task) {
+        this.queryParam.bpmId = this.processData.businessKey
+      }
+
       if(!this.disableMixinCreated){
         console.log(' -- mixin created -- ')
         this.loadData();
@@ -61,7 +90,7 @@ export const JeecgListMixin = {
       }
   },
   computed: {
-    //token header
+    // token header
     tokenHeader(){
       let head = {'X-Access-Token': Vue.ls.get(ACCESS_TOKEN)}
       let tenantid = Vue.ls.get(TENANT_ID)
@@ -69,7 +98,24 @@ export const JeecgListMixin = {
         head['tenant-id'] = tenantid
       }
       return head;
-    }
+    },
+    scroll:function(){
+      var width = window.innerWidth;
+      let $antTable = window.document.getElementsByClassName("ant-row");
+      if ($antTable[0]){
+        width = $antTable[0].clientWidth;
+      }
+      console.log("$antTable",$antTable)
+      return {
+        // x:'max-content',
+        x:width,
+        y:window.innerHeight/2,
+      }
+    },
+    innerHeight:function(){
+      var innerHeight = window.innerHeight;
+      return  innerHeight;
+    },
   },
   methods:{
     loadData(arg) {
@@ -363,6 +409,68 @@ export const JeecgListMixin = {
       let url = getFileAccessHttpUrl(text)
       window.open(url);
     },
+    handleSubmit: function () {
+      if(!this.url.startProcess){
+        this.$message.error("请设置url.startProcess属性!")
+        return
+      }
+      if (this.selectedRowKeys.length <= 0) {
+        this.$message.warning('请选择记录！');
+        return;
+      } else {
+        var ids = "";
+        for (var a = 0; a < this.selectedRowKeys.length; a++) {
+          ids += this.selectedRowKeys[a] + ",";
+        }
+        var that = this;
+        this.$confirm({
+          title: "提示",
+          content: "确认提交流程吗?",
+          onOk: function () {
+            that.loading = true;
+            let params = {
+              procDefId: that.processData.id,
+              procDeTitle: that.processData.name,
+              tableName: that.processData.businessTable,
+              tableId: ids
+            }
+            console.log(params);
+            postFormAction(that.url.startProcess, params).then((res) => {
+              if (res.success) {
+                //重新计算分页问题
+                that.$message.success('保存成功！')
+                //todo 将表单的数据传给父组件
+                that.$emit('afterSubmit', '')
+              } else {
+                that.$message.error(res.message)
+              }
+            }).finally(() => {
+              that.loading = false;
+            });
+          }
+        });
+      }
+    },
+    close() {
+      //todo 关闭后的回调
+      this.$emit('close')
+    },
+    /*通过审批*/
+    passTask() {
+      if (this.selectedRowKeys.length <= 0) {
+        this.$message.warning('请选择记录！');
+        return;
+      }
+      this.$emit('passTask')
+    },
+    /*驳回审批*/
+    backTask() {
+      if (this.selectedRowKeys.length <= 0) {
+        this.$message.warning('请选择记录！');
+        return;
+      }
+      this.$emit('backTask')
+    }
   }
 
 }

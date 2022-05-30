@@ -1,7 +1,6 @@
 package org.jeecg.modules.system.controller;
 
 import cn.hutool.core.util.RandomUtil;
-import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.aliyuncs.exceptions.ClientException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -13,11 +12,11 @@ import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.constant.CacheConstant;
 import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.system.api.ISysBaseAPI;
-import org.jeecg.modules.base.service.BaseCommonService;
 import org.jeecg.common.system.util.JwtUtil;
 import org.jeecg.common.system.vo.LoginUser;
 import org.jeecg.common.util.*;
 import org.jeecg.common.util.encryption.EncryptedString;
+import org.jeecg.modules.base.service.BaseCommonService;
 import org.jeecg.modules.system.entity.SysDepart;
 import org.jeecg.modules.system.entity.SysUser;
 import org.jeecg.modules.system.model.SysLoginModel;
@@ -434,6 +433,7 @@ public class LoginController {
 	 * @return
 	 * @throws Exception
 	 */
+	@ApiOperation("app登录")
 	@RequestMapping(value = "/mLogin", method = RequestMethod.POST)
 	public Result<JSONObject> mLogin(@RequestBody SysLoginModel sysLoginModel) throws Exception {
 		Result<JSONObject> result = new Result<JSONObject>();

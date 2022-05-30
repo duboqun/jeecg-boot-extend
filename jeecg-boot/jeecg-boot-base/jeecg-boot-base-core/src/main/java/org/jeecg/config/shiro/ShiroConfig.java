@@ -70,6 +70,17 @@ public class ShiroConfig {
                 filterChainDefinitionMap.put(url,"anon");
             }
         }
+
+        //activiti
+        filterChainDefinitionMap.put("/system/sysFile/opendownload", "anon");
+        filterChainDefinitionMap.put("/activiti/**", "anon");
+        filterChainDefinitionMap.put("/diagram-viewer/**", "anon");
+        filterChainDefinitionMap.put("/editor-app/**", "anon");
+
+        //publish
+        filterChainDefinitionMap.put("/api/apps/**", "anon");
+        filterChainDefinitionMap.put("/api/appVersions/**", "anon");
+
         // 配置不会被拦截的链接 顺序判断
         filterChainDefinitionMap.put("/sys/cas/client/validateLogin", "anon"); //cas验证登录
         filterChainDefinitionMap.put("/sys/randomImage/**", "anon"); //登录验证码接口排除
@@ -131,6 +142,10 @@ public class ShiroConfig {
 
         //websocket排除
         filterChainDefinitionMap.put("/websocket/**", "anon");//系统通知和公告
+        filterChainDefinitionMap.put("/chat/**", "anon");//即时通信
+        filterChainDefinitionMap.put("/live/**", "anon");//直播
+        filterChainDefinitionMap.put("/chatroom/**", "anon");//直播
+        filterChainDefinitionMap.put("/ws/**", "anon");//在线会议
         filterChainDefinitionMap.put("/newsWebsocket/**", "anon");//CMS模块
         filterChainDefinitionMap.put("/vxeSocket/**", "anon");//JVxeTable无痕刷新示例
 

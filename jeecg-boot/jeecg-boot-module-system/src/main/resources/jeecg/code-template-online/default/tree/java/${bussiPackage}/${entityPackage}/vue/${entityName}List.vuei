@@ -129,19 +129,27 @@
 
     <!-- 操作按钮区域 -->
     <div class="table-operator">
-      <a-button @click="handleAdd" type="primary" icon="plus">新增</a-button>
-      <a-button type="primary" icon="download" @click="handleExportXls('${tableVo.ftlDescription}')">导出</a-button>
+      <a-button <#if bpm_flag> :disabled="disabled" </#if> @click="handleAdd" type="primary" icon="plus">新增</a-button>
+      <a-button <#if bpm_flag> :disabled="disabled" </#if> type="primary" icon="download" @click="handleExportXls('${tableVo.ftlDescription}')">导出</a-button>
       <a-upload name="file" :showUploadList="false" :multiple="false" :headers="tokenHeader" :action="importExcelUrl" @change="handleImportExcel">
-        <a-button type="primary" icon="import">导入</a-button>
+        <a-button <#if bpm_flag> :disabled="disabled" </#if> type="primary" icon="import">导入</a-button>
       </a-upload>
       <!-- 高级查询区域 -->
+      <#if !bpm_flag>
       <j-super-query :fieldList="superFieldList" ref="superQueryModal" @handleSuperQuery="handleSuperQuery"></j-super-query>
+      </#if>
+      <#if bpm_flag>
+      <a-button :disabled="!isNew" @click="handleSubmit" type="danger" icon="login">发起流程</a-button>
+      <a-button :disabled="!task" @click="passTask" type="danger" icon="check">审批通过</a-button>
+      <a-button :disabled="!task" @click="backTask" type="danger" icon="rollback">审批驳回</a-button>
+      <#else>
       <a-dropdown v-if="selectedRowKeys.length > 0">
         <a-menu slot="overlay">
           <a-menu-item key="1" @click="batchDel"><a-icon type="delete"/>删除</a-menu-item>
         </a-menu>
         <a-button style="margin-left: 8px"> 批量操作 <a-icon type="down" /></a-button>
       </a-dropdown>
+      </#if>
     </div>
 
     <!-- table区域-begin -->
@@ -193,9 +201,9 @@
               <a-menu-item>
                 <a @click="handleAddChild(record)">添加下级</a>
               </a-menu-item>
-              <a-menu-item>
-                <a-popconfirm title="确定删除吗?" @confirm="() => handleDeleteNode(record.id)" placement="topLeft">
-                  <a>删除</a>
+              <a-menu-item <#if bpm_flag> :disabled="disabled" </#if> >
+                <a-popconfirm title="确定删除吗?" @confirm="() => handleDelete(record.id)">
+                  <a <#if bpm_flag> :disabled="disabled" </#if>>删除</a>
                 </a-popconfirm>
               </a-menu-item>
             </a-menu>
@@ -306,6 +314,7 @@
           deleteBatch: "/${entityPackage}/${entityName?uncap_first}/deleteBatch",
           exportXlsUrl: "/${entityPackage}/${entityName?uncap_first}/exportXls",
           importExcelUrl: "${entityPackage}/${entityName?uncap_first}/importExcel",
+          <#if bpm_flag>startProcess: '/actBusiness/addOnline'</#if>
         },
         expandedRowKeys:[],
         hasChildrenField:"${hasChildrenField}",

@@ -63,6 +63,15 @@ export function getAction(url,parameter) {
   })
 }
 
+//post
+export function postFormAction(url,parameter) {
+  return axios({
+    url: url,
+    method:'post' ,
+    params: parameter
+  })
+}
+
 //deleteAction
 export function deleteAction(url,parameter) {
   return axios({
