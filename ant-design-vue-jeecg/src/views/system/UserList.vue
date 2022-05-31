@@ -66,7 +66,7 @@
     <!-- 操作按钮区域 -->
     <div class="table-operator" style="border-top: 5px">
       <a-button @click="handleAdd" type="primary" icon="plus" >添加用户</a-button>
-      <a-button type="primary" icon="download" @click="handleExportXls('用户信息')">导出</a-button>
+      <a-button type="primary" icon="download"  @click="handleExportXls('用户信息')">导出</a-button>
       <a-upload name="file" :showUploadList="false" :multiple="false" :headers="tokenHeader" :action="importExcelUrl" @change="handleImportExcel">
         <a-button type="primary" icon="import">导入</a-button>
       </a-upload>
@@ -291,7 +291,7 @@
         superQueryFieldList: [
           { type: 'input', value: 'username', text: '用户账号', },
           { type: 'input', value: 'realname', text: '用户姓名', },
-          { type: 'select', value: 'sex', text: '性别', dictCode: 'sex' },
+          { type: 'select', value: 'sex', dbType: 'int', text: '性别', dictCode: 'sex' },
         ],
         url: {
           syncUser: "/act/process/extActProcess/doSyncUser",

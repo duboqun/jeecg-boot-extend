@@ -2,6 +2,7 @@ package org.jeecg.modules.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.util.DateUtils;
 import org.jeecg.common.util.PasswordUtil;
@@ -15,6 +16,7 @@ import org.jeecg.modules.system.mapper.SysRoleMapper;
 import org.jeecg.modules.system.mapper.SysThirdAccountMapper;
 import org.jeecg.modules.system.mapper.SysUserMapper;
 import org.jeecg.modules.system.mapper.SysUserRoleMapper;
+import org.jeecg.modules.system.model.ThirdLoginModel;
 import org.jeecg.modules.system.service.ISysThirdAccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ import java.util.List;
  * @Version: V1.0
  */
 @Service
+@Slf4j
 public class SysThirdAccountServiceImpl extends ServiceImpl<SysThirdAccountMapper, SysThirdAccount> implements ISysThirdAccountService {
     
     @Autowired
@@ -115,6 +118,7 @@ public class SysThirdAccountServiceImpl extends ServiceImpl<SysThirdAccountMappe
     @Override
     public SysThirdAccount getOneBySysUserId(String sysUserId, String thirdType) {
         LambdaQueryWrapper<SysThirdAccount> queryWrapper = new LambdaQueryWrapper<>();
+        log.info("getSysUserId: {} ,getThirdType: {}",sysUserId,thirdType);
         queryWrapper.eq(SysThirdAccount::getSysUserId, sysUserId);
         queryWrapper.eq(SysThirdAccount::getThirdType, thirdType);
         return super.getOne(queryWrapper);
@@ -131,6 +135,20 @@ public class SysThirdAccountServiceImpl extends ServiceImpl<SysThirdAccountMappe
     @Override
     public List<SysThirdAccount> listThirdUserIdByUsername(String[] sysUsernameArr, String thirdType) {
         return sysThirdAccountMapper.selectThirdIdsByUsername(sysUsernameArr, thirdType);
+    }
+
+    @Override
+    public SysThirdAccount saveThirdUser(ThirdLoginModel tlm) {
+        SysThirdAccount user = new SysThirdAccount();
+        user.setDelFlag(CommonConstant.DEL_FLAG_0);
+        user.setStatus(1);
+        user.setThirdType(tlm.getSource());
+        user.setAvatar(tlm.getAvatar());
+        user.setRealname(tlm.getUsername());
+        user.setThirdUserUuid(tlm.getUuid());
+        user.setThirdUserId(tlm.getUuid());
+        super.save(user);
+        return user;
     }
 
 }

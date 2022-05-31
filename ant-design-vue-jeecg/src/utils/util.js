@@ -1,5 +1,7 @@
+import Vue from 'vue'
 import * as api from '@/api/api'
 import { isURL } from '@/utils/validate'
+import { ACCESS_TOKEN } from '@/store/mutation-types'
 import onlineCommons from '@jeecg/antd-online-mini'
 
 export function timeFix() {
@@ -81,19 +83,19 @@ export function formatDate(value, fmt) {
 
 // 生成首页路由
 export function generateIndexRouter(data) {
-let indexRouter = [{
-          path: '/',
-          name: 'dashboard',
-          //component: () => import('@/components/layouts/BasicLayout'),
-          component: resolve => require(['@/components/layouts/TabLayout'], resolve),
-          meta: { title: '首页' },
-          redirect: '/dashboard/analysis',
-          children: [
-            ...generateChildRouters(data)
-          ]
-        },{
-          "path": "*", "redirect": "/404", "hidden": true
-        }]
+  let indexRouter = [{
+    path: '/',
+    name: 'dashboard',
+    //component: () => import('@/components/layouts/BasicLayout'),
+    component: resolve => require(['@/components/layouts/TabLayout'], resolve),
+    meta: { title: '首页' },
+    redirect: '/dashboard/analysis',
+    children: [
+      ...generateChildRouters(data)
+    ]
+  },{
+    "path": "*", "redirect": "/404", "hidden": true
+  }]
   return indexRouter;
 }
 
@@ -104,9 +106,9 @@ function  generateChildRouters (data) {
   for (let item of data) {
     let component = "";
     if(item.component.indexOf("layouts")>=0){
-       component = "components/"+item.component;
+      component = "components/"+item.component;
     }else{
-       component = "views/"+item.component;
+      component = "views/"+item.component;
     }
 
     // eslint-disable-next-line
@@ -145,6 +147,7 @@ function  generateChildRouters (data) {
       component: componentPath,
       //component: resolve => require(['@/' + component+'.vue'], resolve),
       hidden:item.hidden,
+      //component:()=> import(`@/views/${item.component}.vue`),
       meta: {
         title:item.meta.title ,
         icon: item.meta.icon,
@@ -203,7 +206,7 @@ export function randomNumber() {
   }
   if (arguments.length === 1) {
     let [length] = arguments
-  // 生成指定长度的随机数字，首位一定不是 0
+    // 生成指定长度的随机数字，首位一定不是 0
     let nums = [...Array(length).keys()].map((i) => (i > 0 ? random(0, 9) : random(1, 9)))
     return parseInt(nums.join(''))
   } else if (arguments.length >= 2) {
@@ -558,5 +561,69 @@ export function removeArrayElement(array, prod, value) {
   }
   if(index>=0){
     array.splice(index, 1);
+  }
+}
+
+/** 判断是否是OAuth2APP环境 */
+export function isOAuth2AppEnv() {
+  return /wxwork|dingtalk/i.test(navigator.userAgent)
+}
+
+/**
+ * 获取积木报表打印地址
+ * @param url
+ * @param id
+ * @param open 是否自动打开
+ * @returns {*}
+ */
+export function getReportPrintUrl(url, id, open) {
+  // URL支持{{ window.xxx }}占位符变量
+  url = url.replace(/{{([^}]+)?}}/g, (s1, s2) => eval(s2))
+  if (url.includes('?')) {
+    url += '&'
+  } else {
+    url += '?'
+  }
+  url += `id=${id}`
+  url += `&token=${Vue.ls.get(ACCESS_TOKEN)}`
+  if (open) {
+    window.open(url)
+  }
+  return url
+}
+
+/**
+ * JS实现AOP切面
+ *
+ * @param obj 包含函数的对象
+ * @param funcName 要切面的函数名
+ * @param callback 执行方法前的回调，用于切面，callback的返回值就是funcName最终的返回值
+ */
+export function aspectAroundFunction(obj, funcName, callback) {
+  if (typeof callback !== 'function' || !obj) {
+    console.warn('【aspectAroundFunction】obj或callback格式不正确')
+    return
+  }
+  // 保存原来的函数
+  let func = obj[funcName]
+  if (typeof func !== 'function') {
+    console.warn('【aspectAroundFunction】' + funcName + '不是一个方法')
+    return
+  }
+  // 赋值新方法
+  // 实现当外部调用 funcName 时，首先调用我定义的新方法
+  // 然后调用传入的callback方法，以决定是否执行 funcName，以及更改参数、返回值
+  obj[funcName] = function (...args) {
+    return callback({
+      args,
+      // 只有执行 proceed 才会真正执行给定的 funcName 方法
+      proceed() {
+        try {
+          return func.apply(obj, args)
+        } catch (e) {
+          console.error(e)
+        }
+      },
+    })
   }
 }

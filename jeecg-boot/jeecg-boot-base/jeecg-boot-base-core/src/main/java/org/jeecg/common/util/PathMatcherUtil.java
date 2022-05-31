@@ -1,12 +1,13 @@
 package org.jeecg.common.util;
 
-import org.springframework.util.AntPathMatcher;
-
 import java.util.Collection;
 import java.util.Map;
 
+import org.springframework.util.AntPathMatcher;
+
 /**
  * 使用Spring自身提供的地址匹配工具匹配URL
+ * @author: jeecg-boot
  */
 public class PathMatcherUtil {
 
@@ -77,8 +78,19 @@ public class PathMatcherUtil {
     }
 
     private interface Matcher {
+
+        /**
+         * 实际验证路径匹配权限
+         * @param var1
+         * @return
+         */
         boolean matches(String var1);
 
+        /**
+         * 提取path中匹配到的部分
+         * @param var1
+         * @return
+         */
         Map<String, String> extractUriTemplateVariables(String var1);
     }
 }

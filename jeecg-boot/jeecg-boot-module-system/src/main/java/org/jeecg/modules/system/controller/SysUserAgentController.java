@@ -107,7 +107,7 @@ public class SysUserAgentController {
 	 * @param sysUserAgent
 	 * @return
 	 */
-	@PutMapping(value = "/edit")
+	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	public Result<SysUserAgent> edit(@RequestBody SysUserAgent sysUserAgent) {
 		Result<SysUserAgent> result = new Result<SysUserAgent>();
 		SysUserAgent sysUserAgentEntity = sysUserAgentService.getById(sysUserAgent.getId());
@@ -236,7 +236,8 @@ public class SysUserAgentController {
       MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
       Map<String, MultipartFile> fileMap = multipartRequest.getFileMap();
       for (Map.Entry<String, MultipartFile> entity : fileMap.entrySet()) {
-          MultipartFile file = entity.getValue();// 获取上传文件对象
+          // 获取上传文件对象
+          MultipartFile file = entity.getValue();
           ImportParams params = new ImportParams();
           params.setTitleRows(2);
           params.setHeadRows(1);

@@ -73,6 +73,16 @@ export default {
         props['disabled'] = true
       }
 
+      // update-begin-author:taoyan date:20211011 for: online表单，附表用户选择器{"multiSelect":false}不生效，单表可以生效 #3036
+      let jsonStr = col['fieldExtendJson']
+      if(jsonStr){
+        let fieldExtendJson = JSON.parse(jsonStr)
+        if(fieldExtendJson && fieldExtendJson['multiSelect']==false){
+          props['multi'] = false
+        }
+      }
+      // update-end-author:taoyan date:20211011 for: online表单，附表用户选择器{"multiSelect":false}不生效，单表可以生效 #3036
+
       return props
     },
   },
@@ -102,7 +112,13 @@ export default {
 
         // 判断是否启用翻译
         if (this.renderType === JVXERenderType.spaner && this.enhanced.translate.enabled) {
-          this.innerValue = this.enhanced.translate.handler.call(this, value)
+          let res = this.enhanced.translate.handler.call(this, value)
+          // 异步翻译，目前仅【多级联动】使用
+          if (res instanceof Promise) {
+            res.then(value => this.innerValue = value)
+          } else {
+            this.innerValue = res
+          }
         }
       },
     },

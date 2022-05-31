@@ -4,6 +4,7 @@
 //import org.jeecg.modules.demo.test.entity.JeecgDemo;
 //import org.jeecg.modules.demo.test.mapper.JeecgDemoMapper;
 //import org.jeecg.modules.demo.test.service.IJeecgDemoService;
+//import org.jeecg.modules.system.service.ISysDataLogService;
 //import org.junit.Assert;
 //import org.junit.Test;
 //import org.junit.runner.RunWith;
@@ -21,8 +22,8 @@
 //	private JeecgDemoMapper jeecgDemoMapper;
 //	@Resource
 //	private IJeecgDemoService jeecgDemoService;
-////	@Resource
-////	private ISysDataLogService sysDataLogService;
+//	@Resource
+//	private ISysDataLogService sysDataLogService;
 //	@Resource
 //	private MockController mock;
 //
@@ -49,17 +50,15 @@
 //		jeecgDemoService.testTran();
 //	}
 //
-//	//author:lvdandan-----date：20190315---for:添加数据日志测试----
 //	/**
 //	 * 测试数据日志添加
 //	 */
-////	@Test
-////	public void testDataLogSave() {
-////		System.out.println(("----- datalog test ------"));
-////		String tableName = "jeecg_demo";
-////		String dataId = "4028ef81550c1a7901550c1cd6e70001";
-////		String dataContent = mock.sysDataLogJson();
-////		sysDataLogService.addDataLog(tableName, dataId, dataContent);
-////	}
-//	//author:lvdandan-----date：20190315---for:添加数据日志测试----
+//	@Test
+//	public void testDataLogSave() {
+//		System.out.println(("----- datalog test ------"));
+//		String tableName = "jeecg_demo";
+//		String dataId = "4028ef81550c1a7901550c1cd6e70001";
+//		String dataContent = mock.sysDataLogJson();
+//		sysDataLogService.addDataLog(tableName, dataId, dataContent);
+//	}
 //}

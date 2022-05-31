@@ -1,7 +1,7 @@
 Ant Design Jeecg Vue
 ====
 
-当前最新版本： 2.4.5（发布日期：20210607）
+当前最新版本： 3.1.0（发布日期：20220301）
 
 Overview
 ----
@@ -33,7 +33,7 @@ Jeecg-boot 的前端UI框架，采用前后端分离方案，提供强大代码�
 - 拉取项目代码
 ```bash
 git clone https://github.com/zhangdaiscott/jeecg-boot.git
-cd  jeecg-boot/ant-design-jeecg-vue
+cd  jeecg-boot/ant-design-vue-jeecg
 ```
 
 - 安装依赖
@@ -93,9 +93,9 @@ yarn run lint
 
 - [Vue](https://cn.vuejs.org/v2/guide)
 
-- [路由/菜单说明](https://github.com/zhangdaiscott/jeecg-boot/tree/master/ant-design-jeecg-vue/src/router/README.md)
+- [路由/菜单说明](https://github.com/zhangdaiscott/jeecg-boot/tree/master/ant-design-vue-jeecg/src/router/README.md)
 
-- [ANTD 默认配置项](https://github.com/zhangdaiscott/jeecg-boot/tree/master/ant-design-jeecg-vue/src/defaultSettings.js)
+- [ANTD 默认配置项](https://github.com/zhangdaiscott/jeecg-boot/tree/master/ant-design-vue-jeecg/src/defaultSettings.js)
 
 - 其他待补充...
 

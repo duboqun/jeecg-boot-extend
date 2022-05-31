@@ -1,3 +1,4 @@
+<#include "/common/utils.ftl">
 <template>
   <a-card :bordered="false">
     <!-- 查询区域 -->
@@ -172,9 +173,9 @@
         <template slot="htmlSlot" slot-scope="text">
           <div v-html="text"></div>
         </template>
-        <template slot="imgSlot" slot-scope="text">
+        <template slot="imgSlot" slot-scope="text,record">
           <span v-if="!text" style="font-size: 12px;font-style: italic;">无图片</span>
-          <img v-else :src="getImgView(text)" height="25px" alt="" style="max-width:80px;font-size: 12px;font-style: italic;"/>
+          <img v-else :src="getImgView(text)" :preview="record.id" height="25px" alt="" style="max-width:80px;font-size: 12px;font-style: italic;"/>
         </template>
         <#if list_need_pca>
         <template slot="pcaSlot" slot-scope="text">
@@ -300,7 +301,7 @@
             customRender: (text) => (text ? filterMultiDictText(this.dictOptions['${po.fieldName}'], text) : '')
             <#else>
             dataIndex: '${po.fieldName}',
-            customRender: (text, record) => (text ? record['${po.dictText}'] : '')
+            customRender: (text, record) => (text ? record['${dashedToCamel(po.dictText)}'] : '')
             </#if>
 			<#else>
             dataIndex: '${po.fieldName}'
@@ -414,7 +415,6 @@
       </#list>
       },
       getSuperFieldList(){
-        <#include "/common/utils.ftl">
         let fieldList=[];
          <#list columns as po>
         fieldList.push(${superQueryFieldList(po)})

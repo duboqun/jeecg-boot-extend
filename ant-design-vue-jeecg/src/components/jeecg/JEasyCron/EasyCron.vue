@@ -144,8 +144,12 @@ export default {
       const v = this.cronValue_c
       if (this.hideYear || this.hideSecond) return v
       const vs = v.split(' ')
+      if (vs.length >= 6) {
+        // 将 Quartz 星期 的规则转换为 CronParser 的规则
+        vs[5] = this.convertQuartzWeekToCParser(vs[5])
+      }
       return vs.slice(0, vs.length - 1).join(' ')
-    }
+    },
   },
   watch: {
     cronValue(newVal, oldVal) {
@@ -158,7 +162,49 @@ export default {
     cronValue_c(newVal, oldVal) {
       this.calTriggerList()
       this.$emit('change', newVal)
-
+      this.assignInput()
+    },
+    minute() {
+      if (this.second === '*') {
+        this.second = '0'
+      }
+    },
+    hour() {
+      if (this.minute === '*') {
+        this.minute = '0'
+      }
+    },
+    day(day) {
+      if (day !== '?' && this.hour === '*') {
+        this.hour = '0'
+      }
+    },
+    week(week) {
+      if (week !== '?' && this.hour === '*') {
+        this.hour = '0'
+      }
+    },
+    month() {
+      if (this.day === '?' && this.week === '*') {
+        this.week = '1'
+      } else if (this.week === '?' && this.day === '*') {
+        this.day = '1'
+      }
+    },
+    year() {
+      if (this.month === '*') {
+        this.month = '1'
+      }
+    },
+  },
+  created() {
+    this.formatValue()
+    this.$nextTick(() => {
+      this.calTriggerListInner()
+    })
+  },
+  methods: {
+    assignInput() {
       Object.assign(this.inputValues, {
         second: this.second,
         minute: this.minute,
@@ -169,15 +215,7 @@ export default {
         year: this.year,
         cron: this.cronValue_c,
       })
-    }
-  },
-  created() {
-    this.formatValue()
-    this.$nextTick(() => {
-      this.calTriggerListInner()
-    })
-  },
-  methods: {
+    },
     formatValue() {
       if (!this.cronValue) return
       const values = this.cronValue.split(' ').filter(item => !!item)
@@ -190,6 +228,39 @@ export default {
       if (values.length > i) this.month = values[i++]
       if (values.length > i) this.week = values[i++]
       if (values.length > i) this.year = values[i]
+      this.assignInput()
+    },
+    // 将 Quartz 星期 的规则转换为 CronParser 的规则：
+    // Quartz 的规则：1 = 周日，2 = 周一，3 = 周二，4 = 周三，5 = 周四，6 = 周五，7 = 周六
+    // CronParser 的规则： 0 = 周日，1 = 周一，2 = 周二，3 = 周三，4 = 周四，5 = 周五，6 = 周六，7 = 周日
+    convertQuartzWeekToCParser(week) {
+      let convert = (v) => {
+        if (v === '0') {
+          return '1'
+        }
+        if (v === '1') {
+          return '0'
+        }
+        return (Number.parseInt(v) - 1).toString()
+      }
+      // 匹配示例 1-7 or 1/7
+      let patten1 = /^([0-7])([-/])([0-7])$/
+      // 匹配示例 1,4,7
+      let patten2 = /^([0-7])(,[0-7])+$/
+      if (/^[0-7]$/.test(week)) {
+        return convert(week)
+      } else if (patten1.test(week)) {
+        return week.replace(patten1, ($0, before, separator, after) => {
+          if (separator === '/') {
+            return convert(before) + separator + after
+          } else {
+            return convert(before) + separator + convert(after)
+          }
+        })
+      } else if (patten2.test(week)) {
+        return week.split(',').map(v => convert(v)).join(',')
+      }
+      return week
     },
     calTriggerList: simpleDebounce(function () {
       this.calTriggerListInner()

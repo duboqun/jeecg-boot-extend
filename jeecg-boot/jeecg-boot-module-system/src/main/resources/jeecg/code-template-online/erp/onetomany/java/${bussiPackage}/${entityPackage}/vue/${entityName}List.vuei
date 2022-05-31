@@ -1,3 +1,4 @@
+<#include "/common/utils.ftl">
 <template>
   <a-card :bordered="false">
     <!-- 查询区域 -->
@@ -9,6 +10,7 @@
 <#assign list_need_dict=false>
 <#assign list_need_category=false>
 <#assign list_need_pca=false>
+<#assign subMainFieldMap={}>
 <#-- 开始循环 -->
 <#list columns as po>
 <#if po.isQuery=='Y'>
@@ -160,9 +162,9 @@
         <template slot="htmlSlot" slot-scope="text">
           <div v-html="text"></div>
         </template>
-        <template slot="imgSlot" slot-scope="text">
+        <template slot="imgSlot" slot-scope="text,record">
           <span v-if="!text" style="font-size: 12px;font-style: italic;">无图片</span>
-          <img v-else :src="getImgView(text)" height="25px" alt="" style="max-width:80px;font-size: 12px;font-style: italic;"/>
+          <img v-else :src="getImgView(text)" :preview="record.id" height="25px" alt="" style="max-width:80px;font-size: 12px;font-style: italic;"/>
         </template>
         <template slot="fileSlot" slot-scope="text">
           <span v-if="!text" style="font-size: 12px;font-style: italic;">无文件</span>
@@ -352,6 +354,14 @@
         },
         selectedMainId:'',
         superFieldList:[],
+        <#list subTables as sub>
+        <#if sub?? && (sub.foreignMainKeys)??>
+          <#list sub.foreignMainKeys as key>
+            <#assign subMainFieldMap += {"${sub.entityName?uncap_first}MainId": "${dashedToCamel(key)}"}>
+          </#list>
+        ${sub.entityName?uncap_first}MainId: '',
+        </#if>
+        </#list>
       }
     },
     created() {
@@ -386,7 +396,7 @@
             this.$set(this.dictOptions, '${po.fieldName}', res.result)
           }
         })
-        <#elseif po.classType=='sel_search' || po.classType=='list_multi' || po.classType=='list' || po.classType=='radio' || po.classType=='checkbox'>
+        <#elseif po.classType=='radio' || po.classType=='checkbox'>
         	<#assign list_field_dictCode="">
 	        <#if po.dictTable?default("")?trim?length gt 1>
 				<#assign list_field_dictCode="${po.dictTable},${po.dictText},${po.dictField}">
@@ -420,6 +430,9 @@
         this.selectedMainId=selectedRowKeys[0]
         this.selectedRowKeys = selectedRowKeys;
         this.selectionRows = selectionRows;
+        <#list subMainFieldMap as key,value>
+        this.${key} = selectionRows[0]['${value}']
+        </#list>
       },
       loadData(arg) {
         if(!this.url.list){
@@ -445,7 +458,6 @@
         })
       },
       getSuperFieldList(){
-        <#include "/common/utils.ftl">
         let fieldList=[];
          <#list columns as po>
         fieldList.push(${superQueryFieldList(po)})

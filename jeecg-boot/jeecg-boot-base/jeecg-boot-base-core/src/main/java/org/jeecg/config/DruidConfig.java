@@ -1,8 +1,9 @@
 package org.jeecg.config;
 
-import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure;
-import com.alibaba.druid.spring.boot.autoconfigure.properties.DruidStatProperties;
-import com.alibaba.druid.util.Utils;
+import java.io.IOException;
+
+import javax.servlet.*;
+
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -10,9 +11,14 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.servlet.*;
-import java.io.IOException;
+import com.alibaba.druid.spring.boot.autoconfigure.DruidDataSourceAutoConfigure;
+import com.alibaba.druid.spring.boot.autoconfigure.properties.DruidStatProperties;
+import com.alibaba.druid.util.Utils;
 
+/**
+ * @Description: DruidConfig配置类
+ * @author: jeecg-boot
+ */
 @Configuration
 @AutoConfigureAfter(DruidDataSourceAutoConfigure.class)
 public class DruidConfig {
@@ -34,7 +40,7 @@ public class DruidConfig {
      * 去除Druid监控页面的广告
      *
      * @param properties DruidStatProperties属性集合
-     * @return {@link org.springframework.boot.web.servlet.FilterRegistrationBean}
+     * @return {@link FilterRegistrationBean}
      */
     @Bean
     @ConditionalOnWebApplication
@@ -65,8 +71,8 @@ public class DruidConfig {
 
         private final String newJs;
 
-        public RemoveAdFilter(String newJS) {
-            this.newJs = newJS;
+        public RemoveAdFilter(String newJs) {
+            this.newJs = newJs;
         }
 
         @Override

@@ -8,9 +8,14 @@ package org.jeecg.common.constant;
 public interface CacheConstant {
 
 	/**
-	 * 字典信息缓存
+	 * 字典信息缓存（含禁用的字典项）
 	 */
     public static final String SYS_DICT_CACHE = "sys:cache:dict";
+
+	/**
+	 * 字典信息缓存 status为有效的
+	 */
+	public static final String SYS_ENABLE_DICT_CACHE = "sys:cache:dictEnable";
 	/**
 	 * 表字典信息缓存
 	 */
@@ -91,4 +96,8 @@ public interface CacheConstant {
 	 * online图表
 	 */
 	public static final String ONLINE_GRAPH = "sys:cache:online:graph";
+	/**
+	 * 拖拽页面信息缓存
+	 */
+	public static final String DRAG_PAGE_CACHE = "drag:cache:page";
 }

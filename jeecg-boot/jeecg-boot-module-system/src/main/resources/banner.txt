@@ -16,6 +16,6 @@ ${AnsiColor.BRIGHT_BLUE}
 `----'                          '---"               `---`
 
 ${AnsiColor.BRIGHT_GREEN}
-Flow Pro Version: 1.0.0
+Jeecg  Boot Version: 3.2.0
 Spring Boot Version: ${spring-boot.version}${spring-boot.formatted-version}
 ${AnsiColor.BLACK}

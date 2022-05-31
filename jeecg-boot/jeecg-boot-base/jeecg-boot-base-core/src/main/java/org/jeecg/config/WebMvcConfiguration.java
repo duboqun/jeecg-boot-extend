@@ -3,8 +3,14 @@ package org.jeecg.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.actuate.trace.http.InMemoryHttpTraceRepository;
+import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +22,8 @@ import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -41,7 +48,10 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/**")
-                .addResourceLocations("file:" + upLoadPath + "//", "file:" + webAppPath + "//")
+                //update-begin-author:taoyan date:20211116 for: jeecg.path.webapp配置无效 #3126
+                .addResourceLocations("file:" + upLoadPath + "//")
+                .addResourceLocations("file:" + webAppPath + "//")
+                //update-end-author:taoyan date:20211116 for: jeecg.path.webapp配置无效 #3126
                 .addResourceLocations(staticLocations.split(","));
     }
 
@@ -62,7 +72,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
         //是否允许请求带有验证信息
         corsConfiguration.setAllowCredentials(true);
         // 允许访问的客户端域名
-        corsConfiguration.addAllowedOrigin("*");
+        corsConfiguration.addAllowedOriginPattern("*");
         // 允许服务端访问的客户端请求头
         corsConfiguration.addAllowedHeader("*");
         // 允许访问的方法名,GET POST等
@@ -72,9 +82,9 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     }
 
     /**
-    * 添加Long转json精度丢失的配置
-    * @Return: void
-    */
+     * 添加Long转json精度丢失的配置
+     * @Return: void
+     */
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         MappingJackson2HttpMessageConverter jackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter();
@@ -88,12 +98,38 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     }
 
     /**
+     * 解决springboot2.6
+     * 日期时间格式化
+     * @return
+     */
+    @Bean
+    public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer() {
+        return builder -> {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            //返回时间数据序列化
+            builder.serializerByType(LocalDateTime.class, new LocalDateTimeSerializer(formatter));
+            //接收时间数据反序列化
+            builder.deserializerByType(LocalDateTime.class, new LocalDateTimeDeserializer(formatter));
+        };
+    }
+
+    /**
      * SpringBootAdmin的Httptrace不见了
      * https://blog.csdn.net/u013810234/article/details/110097201
      */
     @Bean
     public InMemoryHttpTraceRepository getInMemoryHttpTrace(){
         return new InMemoryHttpTraceRepository();
+    }
+
+
+    /**
+     * 解决springboot2.6
+     * 解决metrics端点不显示jvm信息的问题(zyf)
+     */
+    @Bean
+    InitializingBean forcePrometheusPostProcessor(BeanPostProcessor meterRegistryPostProcessor, PrometheusMeterRegistry registry) {
+        return () -> meterRegistryPostProcessor.postProcessAfterInitialization(registry, "");
     }
 
 }

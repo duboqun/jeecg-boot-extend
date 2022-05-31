@@ -8,7 +8,6 @@ import { deleteAction, getAction, postAction, postFormAction, downFile, getFileA
 import Vue from 'vue'
 import { ACCESS_TOKEN, TENANT_ID } from "@/store/mutation-types"
 import store from '@/store'
-import {Modal} from 'ant-design-vue'
 
 export const JeecgListMixin = {
   props: {
@@ -140,11 +139,11 @@ export const JeecgListMixin = {
             this.ipagination.total = 0;
           }
           //update-end---author:zhangyafei    Date:20201118  for：适配不分页的数据列表------------
-        }
-        if(res.code===510){
+        }else{
           this.$message.warning(res.message)
         }
-        this.loading = false;
+      }).finally(() => {
+        this.loading = false
       })
     },
     initDictConfig(){
@@ -194,6 +193,10 @@ export const JeecgListMixin = {
     },
     searchQuery() {
       this.loadData(1);
+      // 点击查询清空列表选中行
+      // https://gitee.com/jeecg/jeecg-boot/issues/I4KTU1
+      this.selectedRowKeys = []
+      this.selectionRows = []
     },
     superQuery() {
       this.$refs.superQueryModal.show();
@@ -342,10 +345,12 @@ export const JeecgListMixin = {
     },
     /* 导入 */
     handleImportExcel(info){
+      this.loading = true;
       if (info.file.status !== 'uploading') {
         console.log(info.file, info.fileList);
       }
       if (info.file.status === 'done') {
+        this.loading = false;
         if (info.file.response.success) {
           // this.$message.success(`${info.file.name} 文件上传成功`);
           if (info.file.response.code === 201) {
@@ -367,11 +372,12 @@ export const JeecgListMixin = {
           this.$message.error(`${info.file.name} ${info.file.response.message}.`);
         }
       } else if (info.file.status === 'error') {
+        this.loading = false;
         if (info.file.response.status === 500) {
           let data = info.file.response
           const token = Vue.ls.get(ACCESS_TOKEN)
           if (token && data.message.includes("Token失效")) {
-            Modal.error({
+            this.$error({
               title: '登录已过期',
               content: '很抱歉，登录已过期，请重新登录',
               okText: '重新登录',

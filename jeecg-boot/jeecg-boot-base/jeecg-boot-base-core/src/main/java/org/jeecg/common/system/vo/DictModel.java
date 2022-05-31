@@ -8,6 +8,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
+/**
+ * @Description: 字典类
+ * @author: jeecg-boot
+ */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
@@ -37,6 +41,12 @@ public class DictModel implements Serializable{
 	 * @return
 	 */
 	public String getTitle() {
+		return this.text;
+	}
+	/**
+	 * 特殊用途： vue3 Select组件
+	 */
+	public String getLabel() {
 		return this.text;
 	}
 

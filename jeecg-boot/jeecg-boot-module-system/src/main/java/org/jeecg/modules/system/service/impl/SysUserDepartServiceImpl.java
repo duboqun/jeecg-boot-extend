@@ -1,29 +1,28 @@
 package org.jeecg.modules.system.service.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Collectors;
-
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.util.oConvertUtils;
 import org.jeecg.modules.system.entity.SysDepart;
 import org.jeecg.modules.system.entity.SysUser;
 import org.jeecg.modules.system.entity.SysUserDepart;
 import org.jeecg.modules.system.mapper.SysUserDepartMapper;
+import org.jeecg.modules.system.mapper.SysUserMapper;
 import org.jeecg.modules.system.model.DepartIdModel;
 import org.jeecg.modules.system.service.ISysDepartService;
 import org.jeecg.modules.system.service.ISysUserDepartService;
-import org.jeecg.modules.system.service.ISysUserService;
+import org.jeecg.modules.system.vo.SysUserDepVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * <P>
@@ -37,7 +36,7 @@ public class SysUserDepartServiceImpl extends ServiceImpl<SysUserDepartMapper, S
 	@Autowired
 	private ISysDepartService sysDepartService;
 	@Autowired
-	private ISysUserService sysUserService;
+	private SysUserMapper sysUserMapper;
 	
 
 	/**
@@ -87,7 +86,7 @@ public class SysUserDepartServiceImpl extends ServiceImpl<SysUserDepartMapper, S
 			for(SysUserDepart uDep : uDepList) {
 				userIdList.add(uDep.getUserId());
 			}
-			List<SysUser> userList = (List<SysUser>) sysUserService.listByIds(userIdList);
+			List<SysUser> userList = (List<SysUser>) sysUserMapper.selectBatchIds(userIdList);
 			//update-begin-author:taoyan date:201905047 for:接口调用查询返回结果不能返回密码相关信息
 			for (SysUser sysUser : userList) {
 				sysUser.setSalt("");
@@ -109,7 +108,7 @@ public class SysUserDepartServiceImpl extends ServiceImpl<SysUserDepartMapper, S
 			realname = realname.trim();
 		}
 		List<SysUser> userList = this.baseMapper.queryDepartUserList(depCode, realname);
-		Map<String, SysUser> map = new HashMap<String, SysUser>();
+		Map<String, SysUser> map = new HashMap(5);
 		for (SysUser sysUser : userList) {
 			// 返回的用户数据去掉密码信息
 			sysUser.setSalt("");
@@ -128,10 +127,13 @@ public class SysUserDepartServiceImpl extends ServiceImpl<SysUserDepartMapper, S
 		Page<SysUser> page = new Page<SysUser>(pageNo, pageSize);
 		if(oConvertUtils.isEmpty(departId)){
 			LambdaQueryWrapper<SysUser> query = new LambdaQueryWrapper<>();
+            //update-begin---author:wangshuai ---date:20220104  for：[JTC-297]已冻结用户仍可设置为代理人------------
+            query.eq(SysUser::getStatus,Integer.parseInt(CommonConstant.STATUS_1));
+            //update-end---author:wangshuai ---date:20220104  for：[JTC-297]已冻结用户仍可设置为代理人------------
 			if(oConvertUtils.isNotEmpty(username)){
 				query.like(SysUser::getUsername, username);
 			}
-			pageList = sysUserService.page(page, query);
+			pageList = sysUserMapper.selectPage(page, query);
 		}else{
 			// 有部门ID 需要走自定义sql
 			SysDepart sysDepart = sysDepartService.getById(departId);
@@ -140,10 +142,10 @@ public class SysUserDepartServiceImpl extends ServiceImpl<SysUserDepartMapper, S
 		List<SysUser> userList = pageList.getRecords();
 		if(userList!=null && userList.size()>0){
 			List<String> userIds = userList.stream().map(SysUser::getId).collect(Collectors.toList());
-			Map<String, SysUser> map = new HashMap<String, SysUser>();
+			Map<String, SysUser> map = new HashMap(5);
 			if(userIds!=null && userIds.size()>0){
 				// 查部门名称
-				Map<String,String>  useDepNames = sysUserService.getDepNamesByUserIds(userIds);
+				Map<String,String>  useDepNames = this.getDepNamesByUserIds(userIds);
 				userList.forEach(item->{
 					//TODO 临时借用这个字段用于页面展示
 					item.setOrgCodeTxt(useDepNames.get(item.getId()));
@@ -156,6 +158,26 @@ public class SysUserDepartServiceImpl extends ServiceImpl<SysUserDepartMapper, S
 			pageList.setRecords(new ArrayList<SysUser>(map.values()));
 		}
 		return pageList;
+	}
+
+	/**
+	 * 升级SpringBoot2.6.6,不允许循环依赖
+	 * @param userIds
+	 * @return
+	 */
+	private Map<String, String> getDepNamesByUserIds(List<String> userIds) {
+		List<SysUserDepVo> list = sysUserMapper.getDepNamesByUserIds(userIds);
+
+		Map<String, String> res = new HashMap(5);
+		list.forEach(item -> {
+					if (res.get(item.getUserId()) == null) {
+						res.put(item.getUserId(), item.getDepartName());
+					} else {
+						res.put(item.getUserId(), res.get(item.getUserId()) + "," + item.getDepartName());
+					}
+				}
+		);
+		return res;
 	}
 
 }

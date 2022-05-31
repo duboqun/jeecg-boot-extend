@@ -5,18 +5,18 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.jeecg.common.api.vo.Result;
 import org.jeecg.common.constant.CommonConstant;
-import org.jeecg.common.system.util.JwtUtil;
+import org.jeecg.common.constant.enums.RoleIndexConfigEnum;
 import org.jeecg.common.system.vo.LoginUser;
-import org.jeecg.common.util.MD5Util;
+import org.jeecg.common.util.Md5Util;
 import org.jeecg.common.util.oConvertUtils;
-import org.jeecg.modules.system.entity.SysDepartPermission;
-import org.jeecg.modules.system.entity.SysPermission;
-import org.jeecg.modules.system.entity.SysPermissionDataRule;
-import org.jeecg.modules.system.entity.SysRolePermission;
+import org.jeecg.config.JeeccgBaseConfig;
+import org.jeecg.modules.base.service.BaseCommonService;
+import org.jeecg.modules.system.entity.*;
 import org.jeecg.modules.system.model.SysPermissionTree;
 import org.jeecg.modules.system.model.TreeModel;
 import org.jeecg.modules.system.service.*;
@@ -24,6 +24,7 @@ import org.jeecg.modules.system.util.PermissionDataUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,9 +53,21 @@ public class SysPermissionController {
 	@Autowired
 	private ISysDepartPermissionService sysDepartPermissionService;
 
+	@Autowired
+	private ISysUserService sysUserService;
+
+	@Autowired
+	private JeeccgBaseConfig jeeccgBaseConfig;
+
+	@Autowired
+    private BaseCommonService baseCommonService;
+
+	@Autowired
+	private ISysRoleIndexService sysRoleIndexService;
+
 	/**
 	 * 加载数据节点
-	 * 
+	 *
 	 * @return
 	 */
 	@RequestMapping(value = "/list", method = RequestMethod.GET)
@@ -151,7 +164,7 @@ public class SysPermissionController {
 			query.eq(SysPermission::getDelFlag, CommonConstant.DEL_FLAG_0);
 			query.orderByAsc(SysPermission::getSortNo);
 			List<SysPermission> list = sysPermissionService.list(query);
-			Map<String, List<SysPermissionTree>> listMap = new HashMap<>();
+			Map<String, List<SysPermissionTree>> listMap = new HashMap(5);
 			for (SysPermission item : list) {
 				String pid = item.getParentId();
 				if (parentIdList.contains(pid)) {
@@ -195,11 +208,11 @@ public class SysPermissionController {
 
 	/**
 	 * 查询用户拥有的菜单权限和按钮权限
-	 * 
+	 *
 	 * @return
 	 */
 	@RequestMapping(value = "/getUserPermissionByToken", method = RequestMethod.GET)
-	public Result<?> getUserPermissionByToken() {
+	public Result<?> getUserPermissionByToken(HttpServletRequest request) {
 		Result<JSONObject> result = new Result<JSONObject>();
 		try {
 			//直接获取当前用户不适用前端token
@@ -215,9 +228,21 @@ public class SysPermissionController {
 				metaList.add(0,indexMenu);
 			}
 			//update-end-author:taoyan date:20200211 for: TASK #3368 【路由缓存】首页的缓存设置有问题，需要根据后台的路由配置来实现是否缓存
+
+			//update-begin--Author:liusq  Date:20210624  for:自定义首页地址LOWCOD-1578
+			List<String> roles = sysUserService.getRole(loginUser.getUsername());
+            String compUrl = RoleIndexConfigEnum.getIndexByRoles(roles);
+			if(StringUtils.isNotBlank(compUrl)){
+				List<SysPermission> menus = metaList.stream().filter(sysPermission -> "首页".equals(sysPermission.getName())).collect(Collectors.toList());
+				menus.get(0).setComponent(compUrl);
+			}
+			//update-end--Author:liusq  Date:20210624  for：自定义首页地址LOWCOD-1578
 			JSONObject json = new JSONObject();
 			JSONArray menujsonArray = new JSONArray();
 			this.getPermissionJsonArray(menujsonArray, metaList, null);
+			//一级菜单下的子菜单全部是隐藏路由，则一级菜单不显示
+			this.handleFirstLevelMenuHidden(menujsonArray);
+
 			JSONArray authjsonArray = new JSONArray();
 			this.getAuthJsonArray(authjsonArray, metaList);
 			//查询所有的权限
@@ -234,13 +259,59 @@ public class SysPermissionController {
 			json.put("auth", authjsonArray);
 			//全部权限配置集合（按钮权限，访问权限）
 			json.put("allAuth", allauthjsonArray);
+			json.put("sysSafeMode", jeeccgBaseConfig.getSafeMode());
 			result.setResult(json);
-			result.success("查询成功");
 		} catch (Exception e) {
 			result.error500("查询失败:" + e.getMessage());  
 			log.error(e.getMessage(), e);
 		}
 		return result;
+	}
+
+	/**
+	 * 【vue3专用】获取
+	 * 1、查询用户拥有的按钮/表单访问权限
+	 * 2、所有权限 (菜单权限配置)
+	 * 3、系统安全模式 (开启则online报表的数据源必填)
+	 */
+	@RequestMapping(value = "/getPermCode", method = RequestMethod.GET)
+	public Result<?> getPermCode() {
+		try {
+			// 直接获取当前用户
+			LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+			if (oConvertUtils.isEmpty(loginUser)) {
+				return Result.error("请登录系统！");
+			}
+			// 获取当前用户的权限集合
+			List<SysPermission> metaList = sysPermissionService.queryByUser(loginUser.getUsername());
+            // 按钮权限（用户拥有的权限集合）
+            List<String> codeList = metaList.stream()
+                    .filter((permission) -> CommonConstant.MENU_TYPE_2.equals(permission.getMenuType()) && CommonConstant.STATUS_1.equals(permission.getStatus()))
+                    .collect(ArrayList::new, (list, permission) -> list.add(permission.getPerms()), ArrayList::addAll);
+            //
+			JSONArray authArray = new JSONArray();
+			this.getAuthJsonArray(authArray, metaList);
+			// 查询所有的权限
+			LambdaQueryWrapper<SysPermission> query = new LambdaQueryWrapper<>();
+			query.eq(SysPermission::getDelFlag, CommonConstant.DEL_FLAG_0);
+			query.eq(SysPermission::getMenuType, CommonConstant.MENU_TYPE_2);
+			List<SysPermission> allAuthList = sysPermissionService.list(query);
+			JSONArray allAuthArray = new JSONArray();
+			this.getAllAuthJsonArray(allAuthArray, allAuthList);
+			JSONObject result = new JSONObject();
+            // 所拥有的权限编码
+			result.put("codeList", codeList);
+			//按钮权限（用户拥有的权限集合）
+			result.put("auth", authArray);
+			//全部权限配置集合（按钮权限，访问权限）
+			result.put("allAuth", allAuthArray);
+            // 系统安全模式
+			result.put("sysSafeMode", jeeccgBaseConfig.getSafeMode());
+            return Result.OK(result);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+            return Result.error("查询失败:" + e.getMessage());
+		}
 	}
 
 	/**
@@ -328,7 +399,7 @@ public class SysPermissionController {
 
 	/**
 	 * 获取全部的权限树
-	 * 
+	 *
 	 * @return
 	 */
 	@RequestMapping(value = "/queryTreeList", method = RequestMethod.GET)
@@ -348,8 +419,10 @@ public class SysPermissionController {
 			getTreeModelList(treeList, list, null);
 
 			Map<String, Object> resMap = new HashMap<String, Object>();
-			resMap.put("treeList", treeList); // 全部树节点数据
-			resMap.put("ids", ids);// 全部树ids
+            // 全部树节点数据
+			resMap.put("treeList", treeList);
+            // 全部树ids
+			resMap.put("ids", ids);
 			result.setResult(resMap);
 			result.setSuccess(true);
 		} catch (Exception e) {
@@ -359,8 +432,8 @@ public class SysPermissionController {
 	}
 
 	/**
-	 * 异步加载数据节点
-	 * 
+	 * 异步加载数据节点 [接口是废的,没有用到]
+	 *
 	 * @return
 	 */
 	@RequestMapping(value = "/queryListAsync", method = RequestMethod.GET)
@@ -383,7 +456,7 @@ public class SysPermissionController {
 
 	/**
 	 * 查询角色授权
-	 * 
+	 *
 	 * @return
 	 */
 	@RequestMapping(value = "/queryRolePermission", method = RequestMethod.GET)
@@ -401,7 +474,7 @@ public class SysPermissionController {
 
 	/**
 	 * 保存角色授权
-	 * 
+	 *
 	 * @return
 	 */
 	@RequestMapping(value = "/saveRolePermission", method = RequestMethod.POST)
@@ -414,6 +487,10 @@ public class SysPermissionController {
 			String permissionIds = json.getString("permissionIds");
 			String lastPermissionIds = json.getString("lastpermissionIds");
 			this.sysRolePermissionService.saveRolePermission(roleId, permissionIds, lastPermissionIds);
+			//update-begin---author:wangshuai ---date:20220316  for：[VUEN-234]用户管理角色授权添加敏感日志------------
+            LoginUser loginUser = (LoginUser) SecurityUtils.getSubject().getPrincipal();
+			baseCommonService.addLog("修改角色ID: "+roleId+" 的权限配置，操作人： " +loginUser.getUsername() ,CommonConstant.LOG_TYPE_2, 2);
+            //update-end---author:wangshuai ---date:20220316  for：[VUEN-234]用户管理角色授权添加敏感日志------------
 			result.success("保存成功！");
 			log.info("======角色授权成功=====耗时:" + (System.currentTimeMillis() - start) + "毫秒");
 		} catch (Exception e) {
@@ -460,7 +537,32 @@ public class SysPermissionController {
 
 		}
 	}
-	
+
+	/**
+	 * 一级菜单的子菜单全部是隐藏路由，则一级菜单不显示
+	 * @param jsonArray
+	 */
+	private void handleFirstLevelMenuHidden(JSONArray jsonArray) {
+		jsonArray = jsonArray.stream().map(obj -> {
+			JSONObject returnObj = new JSONObject();
+			JSONObject jsonObj = (JSONObject)obj;
+			if(jsonObj.containsKey("children")){
+				JSONArray childrens = jsonObj.getJSONArray("children");
+                childrens = childrens.stream().filter(arrObj -> !"true".equals(((JSONObject) arrObj).getString("hidden"))).collect(Collectors.toCollection(JSONArray::new));
+                if(childrens==null || childrens.size()==0){
+                    jsonObj.put("hidden",true);
+
+                    //vue3版本兼容代码
+                    JSONObject meta = new JSONObject();
+                    meta.put("hideMenu",true);
+                    jsonObj.put("meta", meta);
+                }
+			}
+			return returnObj;
+		}).collect(Collectors.toCollection(JSONArray::new));
+	}
+
+
 	/**
 	  *  获取权限JSON数组
 	 * @param jsonArray
@@ -566,13 +668,15 @@ public class SysPermissionController {
 		} else if (permission.getMenuType().equals(CommonConstant.MENU_TYPE_0) || permission.getMenuType().equals(CommonConstant.MENU_TYPE_1)) {
 			json.put("id", permission.getId());
 			if (permission.isRoute()) {
-				json.put("route", "1");// 表示生成路由
+                //表示生成路由
+				json.put("route", "1");
 			} else {
-				json.put("route", "0");// 表示不生成路由
+                //表示不生成路由
+				json.put("route", "0");
 			}
 
 			if (isWWWHttpUrl(permission.getUrl())) {
-				json.put("path", MD5Util.MD5Encode(permission.getUrl(), "utf-8"));
+				json.put("path", Md5Util.md5Encode(permission.getUrl(), "utf-8"));
 			} else {
 				json.put("path", permission.getUrl());
 			}
@@ -584,16 +688,18 @@ public class SysPermissionController {
 				json.put("name", urlToRouteName(permission.getUrl()));
 			}
 
+			JSONObject meta = new JSONObject();
 			// 是否隐藏路由，默认都是显示的
 			if (permission.isHidden()) {
 				json.put("hidden", true);
+                //vue3版本兼容代码
+                meta.put("hideMenu",true);
 			}
 			// 聚合路由
 			if (permission.isAlwaysShow()) {
 				json.put("alwaysShow", true);
 			}
 			json.put("component", permission.getComponent());
-			JSONObject meta = new JSONObject();
 			// 由用户设置是否缓存页面 用布尔值
 			if (permission.isKeepAlive()) {
 				meta.put("keepAlive", true);
@@ -633,6 +739,11 @@ public class SysPermissionController {
 			if (isWWWHttpUrl(permission.getUrl())) {
 				meta.put("url", permission.getUrl());
 			}
+			// update-begin--Author:sunjianlei  Date:20210918 for：新增适配vue3项目的隐藏tab功能
+			if (permission.isHideTab()) {
+				meta.put("hideTab", true);
+			}
+			// update-end--Author:sunjianlei  Date:20210918 for：新增适配vue3项目的隐藏tab功能
 			json.put("meta", meta);
 		}
 
@@ -642,7 +753,7 @@ public class SysPermissionController {
 	/**
 	 * 判断是否外网URL 例如： http://localhost:8080/jeecg-boot/swagger-ui.html#/ 支持特殊格式： {{
 	 * window._CONFIG['domianURL'] }}/druid/ {{ JS代码片段 }}，前台解析会自动执行JS代码片段
-	 * 
+	 *
 	 * @return
 	 */
 	private boolean isWWWHttpUrl(String url) {
@@ -655,7 +766,7 @@ public class SysPermissionController {
 	/**
 	 * 通过URL生成路由name（去掉URL前缀斜杠，替换内容中的斜杠‘/’为-） 举例： URL = /isystem/role RouteName =
 	 * isystem-role
-	 * 
+	 *
 	 * @return
 	 */
 	private String urlToRouteName(String url) {
@@ -675,7 +786,7 @@ public class SysPermissionController {
 
 	/**
 	 * 根据菜单id来获取其对应的权限数据
-	 * 
+	 *
 	 * @param sysPermissionDataRule
 	 * @return
 	 */
@@ -690,7 +801,7 @@ public class SysPermissionController {
 
 	/**
 	 * 添加菜单权限数据
-	 * 
+	 *
 	 * @param sysPermissionDataRule
 	 * @return
 	 */
@@ -725,7 +836,7 @@ public class SysPermissionController {
 
 	/**
 	 * 删除菜单权限数据
-	 * 
+	 *
 	 * @param id
 	 * @return
 	 */
@@ -745,7 +856,7 @@ public class SysPermissionController {
 
 	/**
 	 * 查询菜单权限数据
-	 * 
+	 *
 	 * @param sysPermissionDataRule
 	 * @return
 	 */
@@ -755,7 +866,6 @@ public class SysPermissionController {
 		try {
 			List<SysPermissionDataRule> permRuleList = sysPermissionDataRuleService.queryPermissionRule(sysPermissionDataRule);
 			result.setResult(permRuleList);
-			result.success("查询成功！");
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			result.error500("操作失败");

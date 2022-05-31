@@ -1,6 +1,5 @@
 package org.jeecg.config.shiro;
 
-import cn.hutool.crypto.SecureUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -11,17 +10,19 @@ import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.jeecg.common.api.CommonAPI;
-import org.jeecg.common.constant.CacheConstant;
 import org.jeecg.common.constant.CommonConstant;
 import org.jeecg.common.system.util.JwtUtil;
 import org.jeecg.common.system.vo.LoginUser;
 import org.jeecg.common.util.RedisUtil;
 import org.jeecg.common.util.SpringContextUtils;
+import org.jeecg.common.util.TokenUtils;
 import org.jeecg.common.util.oConvertUtils;
+import org.jeecg.config.mybatis.TenantContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.Set;
 
 /**
@@ -35,7 +36,7 @@ import java.util.Set;
 public class ShiroRealm extends AuthorizingRealm {
 	@Lazy
     @Resource
-    private CommonAPI commonAPI;
+    private CommonAPI commonApi;
 
     @Lazy
     @Resource
@@ -58,7 +59,7 @@ public class ShiroRealm extends AuthorizingRealm {
      */
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
-        log.info("===============Shiro权限认证开始============ [ roles、permissions]==========");
+        log.debug("===============Shiro权限认证开始============ [ roles、permissions]==========");
         String username = null;
         if (principals != null) {
             LoginUser sysUser = (LoginUser) principals.getPrimaryPrincipal();
@@ -67,12 +68,12 @@ public class ShiroRealm extends AuthorizingRealm {
         SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
 
         // 设置用户拥有的角色集合，比如“admin,test”
-        Set<String> roleSet = commonAPI.queryUserRoles(username);
+        Set<String> roleSet = commonApi.queryUserRoles(username);
         System.out.println(roleSet.toString());
         info.setRoles(roleSet);
 
         // 设置用户拥有的权限集合，比如“sys:role:add,sys:user:add”
-        Set<String> permissionSet = commonAPI.queryUserAuths(username);
+        Set<String> permissionSet = commonApi.queryUserAuths(username);
         info.addStringPermissions(permissionSet);
         System.out.println(permissionSet);
         log.info("===============Shiro权限认证成功==============");
@@ -92,11 +93,19 @@ public class ShiroRealm extends AuthorizingRealm {
         log.debug("===============Shiro身份认证开始============doGetAuthenticationInfo==========");
         String token = (String) auth.getCredentials();
         if (token == null) {
-            log.info("————————身份认证失败——————————IP地址:  "+ oConvertUtils.getIpAddrByRequest(SpringContextUtils.getHttpServletRequest()));
+            HttpServletRequest req = SpringContextUtils.getHttpServletRequest();
+            log.info("————————身份认证失败——————————IP地址:  "+ oConvertUtils.getIpAddrByRequest(req) +"，URL:"+req.getRequestURI());
             throw new AuthenticationException("token为空!");
         }
         // 校验token有效性
-        LoginUser loginUser = this.checkUserTokenIsEffect(token);
+        LoginUser loginUser = null;
+        try {
+            loginUser = this.checkUserTokenIsEffect(token);
+        } catch (AuthenticationException e) {
+            JwtUtil.responseError(SpringContextUtils.getHttpServletResponse(),401,e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
         return new SimpleAuthenticationInfo(loginUser, token, getName());
     }
 
@@ -114,7 +123,8 @@ public class ShiroRealm extends AuthorizingRealm {
 
         // 查询用户信息
         log.debug("———校验token是否有效————checkUserTokenIsEffect——————— "+ token);
-        LoginUser loginUser = commonAPI.getUserByName(username);
+        LoginUser loginUser = TokenUtils.getLoginUser(username,commonApi,redisUtil);
+        //LoginUser loginUser = commonApi.getUserByName(username);
         if (loginUser == null) {
             throw new AuthenticationException("用户不存在!");
         }
@@ -124,9 +134,23 @@ public class ShiroRealm extends AuthorizingRealm {
         }
         // 校验token是否超时失效 & 或者账号密码是否错误
         if (!jwtTokenRefresh(token, username, loginUser.getPassword())) {
-            throw new AuthenticationException("Token失效，请重新登录!");
+            throw new AuthenticationException(CommonConstant.TOKEN_IS_INVALID_MSG);
         }
-
+        //update-begin-author:taoyan date:20210609 for:校验用户的tenant_id和前端传过来的是否一致
+        String userTenantIds = loginUser.getRelTenantIds();
+        if(oConvertUtils.isNotEmpty(userTenantIds)){
+            String contextTenantId = TenantContext.getTenant();
+            String str ="0";
+            if(oConvertUtils.isNotEmpty(contextTenantId) && !str.equals(contextTenantId)){
+                //update-begin-author:taoyan date:20211227 for: /issues/I4O14W 用户租户信息变更判断漏洞
+                String[] arr = userTenantIds.split(",");
+                if(!oConvertUtils.isIn(contextTenantId, arr)){
+                    throw new AuthenticationException("用户租户信息变更,请重新登陆!");
+                }
+                //update-end-author:taoyan date:20211227 for: /issues/I4O14W 用户租户信息变更判断漏洞
+            }
+        }
+        //update-end-author:taoyan date:20210609 for:校验用户的tenant_id和前端传过来的是否一致
         return loginUser;
     }
 
@@ -163,6 +187,8 @@ public class ShiroRealm extends AuthorizingRealm {
             //update-end--Author:scott  Date:20191005   for：解决每次请求，都重写redis中 token缓存问题
             return true;
         }
+
+        //redis中不存在此TOEKN，说明token非法返回false
         return false;
     }
 

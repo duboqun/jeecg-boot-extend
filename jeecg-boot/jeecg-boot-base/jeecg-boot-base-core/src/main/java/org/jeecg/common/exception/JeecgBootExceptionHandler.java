@@ -1,14 +1,17 @@
 package org.jeecg.common.exception;
 
-import io.lettuce.core.RedisConnectionException;
+import cn.hutool.core.util.ObjectUtil;
 import org.apache.shiro.authz.AuthorizationException;
 import org.apache.shiro.authz.UnauthorizedException;
 import org.jeecg.common.api.vo.Result;
+import org.jeecg.common.enums.SentinelErrorInfoEnum;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.connection.PoolException;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -29,9 +32,19 @@ public class JeecgBootExceptionHandler {
 	 * 处理自定义异常
 	 */
 	@ExceptionHandler(JeecgBootException.class)
-	public Result<?> handleRRException(JeecgBootException e){
+	public Result<?> handleJeecgBootException(JeecgBootException e){
 		log.error(e.getMessage(), e);
 		return Result.error(e.getMessage());
+	}
+
+	/**
+	 * 处理自定义异常
+	 */
+	@ExceptionHandler(JeecgBoot401Exception.class)
+	@ResponseStatus(HttpStatus.UNAUTHORIZED)
+	public Result<?> handleJeecgBoot401Exception(JeecgBoot401Exception e){
+		log.error(e.getMessage(), e);
+		return new Result(401,e.getMessage());
 	}
 
 	@ExceptionHandler(NoHandlerFoundException.class)
@@ -55,6 +68,13 @@ public class JeecgBootExceptionHandler {
 	@ExceptionHandler(Exception.class)
 	public Result<?> handleException(Exception e){
 		log.error(e.getMessage(), e);
+		//update-begin---author:zyf ---date:20220411  for：处理Sentinel限流自定义异常
+		Throwable throwable = e.getCause();
+		SentinelErrorInfoEnum errorInfoEnum = SentinelErrorInfoEnum.getErrorByException(throwable);
+		if (ObjectUtil.isNotEmpty(errorInfoEnum)) {
+			return Result.error(errorInfoEnum.getError());
+		}
+		//update-end---author:zyf ---date:20220411  for：处理Sentinel限流自定义异常
 		return Result.error("操作失败，"+e.getMessage());
 	}
 	
@@ -64,7 +84,7 @@ public class JeecgBootExceptionHandler {
 	 * @return
 	 */
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	public Result<?> HttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e){
+	public Result<?> httpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e){
 		StringBuffer sb = new StringBuffer();
 		sb.append("不支持");
 		sb.append(e.getMethod());

@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.jeecg.common.api.vo.Result;
@@ -71,8 +72,13 @@ public class SysDepartController {
 		LoginUser user = (LoginUser) SecurityUtils.getSubject().getPrincipal();
 		try {
 			if(oConvertUtils.isNotEmpty(user.getUserIdentity()) && user.getUserIdentity().equals( CommonConstant.USER_IDENTITY_2 )){
-				List<SysDepartTreeModel> list = sysDepartService.queryMyDeptTreeList(user.getDepartIds());
-				result.setResult(list);
+				//update-begin--Author:liusq  Date:20210624  for:部门查询ids为空后的前端显示问题 issues/I3UD06
+				String departIds = user.getDepartIds();
+				if(StringUtils.isNotBlank(departIds)){
+					List<SysDepartTreeModel> list = sysDepartService.queryMyDeptTreeList(departIds);
+					result.setResult(list);
+				}
+				//update-end--Author:liusq  Date:20210624  for:部门查询ids为空后的前端显示问题 issues/I3UD06
 				result.setMessage(CommonConstant.USER_IDENTITY_2.toString());
 				result.setSuccess(true);
 			}else{
@@ -91,7 +97,7 @@ public class SysDepartController {
 	 * @return
 	 */
 	@RequestMapping(value = "/queryTreeList", method = RequestMethod.GET)
-	public Result<List<SysDepartTreeModel>> queryTreeList() {
+	public Result<List<SysDepartTreeModel>> queryTreeList(@RequestParam(name = "ids", required = false) String ids) {
 		Result<List<SysDepartTreeModel>> result = new Result<>();
 		try {
 			// 从内存中读取
@@ -99,8 +105,13 @@ public class SysDepartController {
 //			if (CollectionUtils.isEmpty(list)) {
 //				list = sysDepartService.queryTreeList();
 //			}
-			List<SysDepartTreeModel> list = sysDepartService.queryTreeList();
-			result.setResult(list);
+			if(oConvertUtils.isNotEmpty(ids)){
+				List<SysDepartTreeModel> departList = sysDepartService.queryTreeList(ids);
+				result.setResult(departList);
+			}else{
+				List<SysDepartTreeModel> list = sysDepartService.queryTreeList();
+				result.setResult(list);
+			}
 			result.setSuccess(true);
 		} catch (Exception e) {
 			log.error(e.getMessage(),e);
@@ -110,14 +121,15 @@ public class SysDepartController {
 
 	/**
 	 * 异步查询部门list
-	 *
+	 * @param parentId 父节点 异步加载时传递
+	 * @param ids 前端回显是传递
 	 * @return
 	 */
 	@RequestMapping(value = "/queryDepartTreeSync", method = RequestMethod.GET)
-	public Result<List<SysDepartTreeModel>> queryDepartTreeSync(@RequestParam(name = "pid", required = false) String parentId) {
+	public Result<List<SysDepartTreeModel>> queryDepartTreeSync(@RequestParam(name = "pid", required = false) String parentId,@RequestParam(name = "ids", required = false) String ids) {
 		Result<List<SysDepartTreeModel>> result = new Result<>();
 		try {
-			List<SysDepartTreeModel> list = sysDepartService.queryTreeListByPid(parentId);
+			List<SysDepartTreeModel> list = sysDepartService.queryTreeListByPid(parentId,ids);
 			result.setResult(list);
 			result.setSuccess(true);
 		} catch (Exception e) {
@@ -186,7 +198,7 @@ public class SysDepartController {
 	 * @return
 	 */
 	//@RequiresRoles({"admin"})
-	@RequestMapping(value = "/edit", method = RequestMethod.PUT)
+	@RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
 	@CacheEvict(value= {CacheConstant.SYS_DEPARTS_CACHE,CacheConstant.SYS_DEPART_IDS_CACHE}, allEntries=true)
 	public Result<SysDepart> edit(@RequestBody SysDepart sysDepart, HttpServletRequest request) {
 		String username = JwtUtil.getUserNameByToken(request);
@@ -310,7 +322,7 @@ public class SysDepartController {
 		if(oConvertUtils.isNotEmpty(user.getUserIdentity()) && user.getUserIdentity().equals( CommonConstant.USER_IDENTITY_2 )){
 			departIds = user.getDepartIds();
 		}
-		List<SysDepartTreeModel> treeList = this.sysDepartService.searhBy(keyWord,myDeptSearch,departIds);
+		List<SysDepartTreeModel> treeList = this.sysDepartService.searchByKeyWord(keyWord,myDeptSearch,departIds);
 		if (treeList == null || treeList.size() == 0) {
 			result.setSuccess(false);
 			result.setMessage("未查询匹配数据！");
@@ -351,6 +363,8 @@ public class SysDepartController {
 
     /**
      * 通过excel导入数据
+	 * 部门导入方案1: 通过机构编码来计算出部门的父级ID,维护上下级关系;
+	 * 部门导入方案2: 你也可以改造下程序,机构编码直接导入,先不设置父ID;全部导入后,写一个sql,补下父ID;
      *
      * @param request
      * @param response
@@ -365,14 +379,15 @@ public class SysDepartController {
 		List<SysDepart> listSysDeparts = null;
         Map<String, MultipartFile> fileMap = multipartRequest.getFileMap();
         for (Map.Entry<String, MultipartFile> entity : fileMap.entrySet()) {
-            MultipartFile file = entity.getValue();// 获取上传文件对象
+            // 获取上传文件对象
+            MultipartFile file = entity.getValue();
             ImportParams params = new ImportParams();
             params.setTitleRows(2);
             params.setHeadRows(1);
             params.setNeedSave(true);
             try {
             	// orgCode编码长度
-            	int codeLength = YouBianCodeUtil.zhanweiLength;
+            	int codeLength = YouBianCodeUtil.ZHANWEI_LENGTH;
                 listSysDeparts = ExcelImportUtil.importExcel(file.getInputStream(), SysDepart.class, params);
                 //按长度排序
                 Collections.sort(listSysDeparts, new Comparator<SysDepart>() {
@@ -406,6 +421,11 @@ public class SysDepartController {
 					sysDepart.setOrgType(sysDepart.getOrgCode().length()/codeLength+"");
                     //update-end---author:liusq   Date:20210223  for：批量导入部门以后，不能追加下一级部门 #2245------------
 					sysDepart.setDelFlag(CommonConstant.DEL_FLAG_0.toString());
+                    //update-begin---author:wangshuai ---date:20220105  for：[JTC-363]部门导入 机构类别没有时导入失败，赋默认值------------
+					if(oConvertUtils.isEmpty(sysDepart.getOrgCategory())){
+					    sysDepart.setOrgCategory("1");
+                    }
+                    //update-end---author:wangshuai ---date:20220105  for：[JTC-363]部门导入 机构类别没有时导入失败，赋默认值------------
 					ImportExcelUtil.importDateSaveOne(sysDepart, ISysDepartService.class, errorMessageList, num, CommonConstant.SQL_INDEX_UNIQ_DEPART_ORG_CODE);
 					num++;
                 }
@@ -457,7 +477,7 @@ public class SysDepartController {
 	public Result<Map<String,Object>> queryTreeByKeyWord(@RequestParam(name = "keyWord", required = false) String keyWord) {
 		Result<Map<String,Object>> result = new Result<>();
 		try {
-			Map<String,Object> map=new HashMap<String,Object>();
+			Map<String,Object> map=new HashMap(5);
 			List<SysDepartTreeModel> list = sysDepartService.queryTreeByKeyWord(keyWord);
 			//根据keyWord获取用户信息
 			LambdaQueryWrapper<SysUser> queryUser = new LambdaQueryWrapper<SysUser>();

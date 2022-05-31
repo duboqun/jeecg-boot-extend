@@ -97,6 +97,9 @@ public class SysBaseApiImpl implements ISysBaseAPI {
 	@Autowired
 	private ThirdAppDingtalkServiceImpl dingtalkService;
 
+	@Autowired
+	ISysCategoryService sysCategoryService;
+
 	@Override
 	@Cacheable(cacheNames=CacheConstant.SYS_USERS_CACHE, key="#username")
 	public LoginUser getUserByName(String username) {
@@ -143,7 +146,9 @@ public class SysBaseApiImpl implements ISysBaseAPI {
 				//通过自定义URL匹配规则 获取菜单（实现通过菜单配置数据权限规则，实际上针对获取数据接口进行数据规则控制）
 				String userMatchUrl = UrlMatchEnum.getMatchResultByUrl(requestPath);
 				LambdaQueryWrapper<SysPermission> queryQserMatch = new LambdaQueryWrapper<SysPermission>();
-				queryQserMatch.eq(SysPermission::getMenuType, 1);
+				// update-begin-author:taoyan date:20211027 for: online菜单如果配置成一级菜单 权限查询不到 取消menuType = 1
+				//queryQserMatch.eq(SysPermission::getMenuType, 1);
+				// update-end-author:taoyan date:20211027 for: online菜单如果配置成一级菜单 权限查询不到 取消menuType = 1
 				queryQserMatch.eq(SysPermission::getDelFlag, 0);
 				queryQserMatch.eq(SysPermission::getUrl, userMatchUrl);
 				if(oConvertUtils.isNotEmpty(userMatchUrl)){
@@ -274,6 +279,12 @@ public class SysBaseApiImpl implements ISysBaseAPI {
 	@Cacheable(value = CacheConstant.SYS_DICT_CACHE,key = "#code", unless = "#result == null ")
 	public List<DictModel> queryDictItemsByCode(String code) {
 		return sysDictService.queryDictItemsByCode(code);
+	}
+
+	@Override
+	@Cacheable(value = CacheConstant.SYS_ENABLE_DICT_CACHE,key = "#code", unless = "#result == null ")
+	public List<DictModel> queryEnableDictItemsByCode(String code) {
+		return sysDictService.queryEnableDictItemsByCode(code);
 	}
 
 	@Override
@@ -557,7 +568,7 @@ public class SysBaseApiImpl implements ISysBaseAPI {
 	}
 
 	@Override
-	public List<SysCategoryModel> queryAllDSysCategory() {
+	public List<SysCategoryModel> queryAllSysCategory() {
 		List<SysCategory> ls = categoryMapper.selectList(null);
 		List<SysCategoryModel> res = oConvertUtils.entityListToModelList(ls,SysCategoryModel.class);
 		return res;
@@ -769,7 +780,7 @@ public class SysBaseApiImpl implements ISysBaseAPI {
 			for(SysUserDepart userDepart : userDepartList){
 				//查询所属公司编码
 				SysDepart depart = sysDepartService.getById(userDepart.getDepId());
-				int length = YouBianCodeUtil.zhanweiLength;
+				int length = YouBianCodeUtil.ZHANWEI_LENGTH;
 				String compyOrgCode = "";
 				if(depart != null && depart.getOrgCode() != null){
 					compyOrgCode = depart.getOrgCode().substring(0,length);
@@ -1045,7 +1056,7 @@ public class SysBaseApiImpl implements ISysBaseAPI {
 			 List<Map> list=new ArrayList();
 			 //4.处理部门和下级用户数据
 			for (SysDepart dept:departs) {
-				Map map=new HashMap();
+				Map map=new HashMap(5);
 				//部门名称
 				String departName = dept.getDepartName();
 				//根据部门编码获取下级部门id
@@ -1065,6 +1076,82 @@ public class SysBaseApiImpl implements ISysBaseAPI {
 			return list;
 		}
 		return null;
+	}
+
+	/**
+	 * 查询分类字典翻译
+	 *
+	 * @param ids 分类字典表id
+	 * @return
+	 */
+	@Override
+	public List<String> loadCategoryDictItem(String ids) {
+		return sysCategoryService.loadDictItem(ids, false);
+	}
+
+	/**
+	 * 根据字典code加载字典text
+	 *
+	 * @param dictCode 顺序：tableName,text,code
+	 * @param keys     要查询的key
+	 * @return
+	 */
+	@Override
+	public List<String> loadDictItem(String dictCode, String keys) {
+		String[] params = dictCode.split(",");
+		return sysDictService.queryTableDictByKeys(params[0], params[1], params[2], keys, false);
+	}
+
+	/**
+	 * 根据字典code查询字典项
+	 *
+	 * @param dictCode 顺序：tableName,text,code
+	 * @param dictCode 要查询的key
+	 * @return
+	 */
+	@Override
+	public List<DictModel> getDictItems(String dictCode) {
+		List<DictModel> ls = sysDictService.getDictItems(dictCode);
+		if (ls == null) {
+			ls = new ArrayList<>();
+		}
+		return ls;
+	}
+
+	/**
+	 * 根据多个字典code查询多个字典项
+	 *
+	 * @param dictCodeList
+	 * @return key = dictCode ； value=对应的字典项
+	 */
+	@Override
+	public Map<String, List<DictModel>> getManyDictItems(List<String> dictCodeList) {
+		return sysDictService.queryDictItemsByCodeList(dictCodeList);
+	}
+
+	/**
+	 * 【下拉搜索】
+	 * 大数据量的字典表 走异步加载，即前端输入内容过滤数据
+	 *
+	 * @param dictCode 字典code格式：table,text,code
+	 * @param keyword  过滤关键字
+	 * @return
+	 */
+	@Override
+	public List<DictModel> loadDictItemByKeyword(String dictCode, String keyword, Integer pageSize) {
+		return sysDictService.loadDict(dictCode, keyword, pageSize);
+	}
+
+	@Override
+	public Map<String, List<DictModel>> translateManyDict(String dictCodes, String keys) {
+		List<String> dictCodeList = Arrays.asList(dictCodes.split(","));
+		List<String> values = Arrays.asList(keys.split(","));
+		return sysDictService.queryManyDictByKeys(dictCodeList, values);
+	}
+
+	@Override
+	public List<DictModel> translateDictFromTableByKeys(String table, String text, String code, String keys) {
+		return sysDictService.queryTableDictTextByKeys(table, text, code, Arrays.asList(keys.split(",")));
 	}
 
 }

@@ -49,7 +49,7 @@ public class DynamicDBUtil {
         dataSource.setBreakAfterAcquireFailure(true);
         dataSource.setConnectionErrorRetryAttempts(0);
         dataSource.setUsername(dbUser);
-        dataSource.setMaxWait(60000);
+        dataSource.setMaxWait(30000);
         dataSource.setPassword(dbPassword);
 
         log.info("******************************************");
@@ -112,6 +112,16 @@ public class DynamicDBUtil {
     }
 
     /**
+     * 根据数据源获取NamedParameterJdbcTemplate
+     * @param dbKey
+     * @return
+     */
+    private static NamedParameterJdbcTemplate getNamedParameterJdbcTemplate(String dbKey) {
+        DruidDataSource dataSource = getDbSourceByDbKey(dbKey);
+        return new NamedParameterJdbcTemplate(dataSource);
+    }
+
+    /**
      * Executes the SQL statement in this <code>PreparedStatement</code> object,
      * which must be an SQL Data Manipulation Language (DML) statement, such as <code>INSERT</code>, <code>UPDATE</code> or
      * <code>DELETE</code>; or an SQL statement that returns nothing,
@@ -151,6 +161,7 @@ public class DynamicDBUtil {
         list = findList(dbKey, sql, param);
         if (oConvertUtils.listIsEmpty(list)) {
             log.error("Except one, but not find actually");
+            return null;
         }
         if (list.size() > 1) {
             log.error("Except one, but more than one actually");
@@ -221,6 +232,31 @@ public class DynamicDBUtil {
     }
 
     /**
+     * 查询数量
+     * @param dbKey
+     * @param sql
+     * @param param
+     * @return
+     */
+    public static Map<String, Object> queryCount(String dbKey, String sql, Map<String, Object> param){
+        NamedParameterJdbcTemplate npJdbcTemplate = getNamedParameterJdbcTemplate(dbKey);
+        return npJdbcTemplate.queryForMap(sql, param);
+    }
+
+    /**
+     * 查询列表数据
+     * @param dbKey
+     * @param sql
+     * @param param
+     * @return
+     */
+    public static List<Map<String, Object>> findListByNamedParam(final String dbKey, String sql, Map<String, Object> param) {
+        NamedParameterJdbcTemplate npJdbcTemplate = getNamedParameterJdbcTemplate(dbKey);
+        List<Map<String, Object>> list = npJdbcTemplate.queryForList(sql, param);
+        return list;
+    }
+
+    /**
      * 支持miniDao语法操作的查询
      *
      * @param dbKey 数据源标识
@@ -238,7 +274,15 @@ public class DynamicDBUtil {
         return list;
     }
 
-    //此方法只能返回单列，不能返回实体类
+    /**
+     * 此方法只能返回单列，不能返回实体类
+     * @param dbKey 数据源的key
+     * @param sql sal
+     * @param clazz 类
+     * @param param 参数
+     * @param <T>
+     * @return
+     */
     public static <T> List<T> findList(final String dbKey, String sql, Class<T> clazz, Object... param) {
         List<T> list;
         JdbcTemplate jdbcTemplate = getJdbcTemplate(dbKey);

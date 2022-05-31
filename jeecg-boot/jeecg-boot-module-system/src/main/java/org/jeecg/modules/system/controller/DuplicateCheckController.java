@@ -4,9 +4,11 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang.StringUtils;
 import org.jeecg.common.api.vo.Result;
+import org.jeecg.common.constant.SymbolConstant;
 import org.jeecg.common.util.SqlInjectionUtil;
 import org.jeecg.modules.system.mapper.SysDictMapper;
 import org.jeecg.modules.system.model.DuplicateCheckVo;
+import org.jeecg.modules.system.security.DictQueryBlackListHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -32,6 +34,9 @@ public class DuplicateCheckController {
 	@Autowired
 	SysDictMapper sysDictMapper;
 
+	@Autowired
+	DictQueryBlackListHandler dictQueryBlackListHandler;
+
 	/**
 	 * 校验数据是否在系统中是否存在
 	 * 
@@ -39,7 +44,7 @@ public class DuplicateCheckController {
 	 */
 	@RequestMapping(value = "/check", method = RequestMethod.GET)
 	@ApiOperation("重复校验接口")
-	public Result<Object> doDuplicateCheck(DuplicateCheckVo duplicateCheckVo, HttpServletRequest request) {
+	public Result<String> doDuplicateCheck(DuplicateCheckVo duplicateCheckVo, HttpServletRequest request) {
 		Long num = null;
 
 		log.info("----duplicate check------："+ duplicateCheckVo.toString());
@@ -47,6 +52,21 @@ public class DuplicateCheckController {
 		//SQL注入校验（只限制非法串改数据库）
 		final String[] sqlInjCheck = {duplicateCheckVo.getTableName(),duplicateCheckVo.getFieldName()};
 		SqlInjectionUtil.filterContent(sqlInjCheck);
+		// update-begin-author:taoyan date:20211227 for: JTC-25 【online报表】oracle 操作问题 录入弹框啥都不填直接保存 ①编码不是应该提示必填么？②报错也应该是具体文字提示，不是后台错误日志
+		if(StringUtils.isEmpty(duplicateCheckVo.getFieldVal())){
+			Result rs = new Result();
+			rs.setCode(500);
+			rs.setSuccess(true);
+			rs.setMessage("数据为空,不作处理！");
+			return rs;
+		}
+		//update-begin-author:taoyan date:20220329 for: VUEN-223【安全漏洞】当前被攻击的接口
+		String checkSql = duplicateCheckVo.getTableName() + SymbolConstant.COMMA + duplicateCheckVo.getFieldName() + SymbolConstant.COMMA;
+		if(!dictQueryBlackListHandler.isPass(checkSql)){
+			return Result.error(dictQueryBlackListHandler.getError());
+		}
+		//update-end-author:taoyan date:20220329 for: VUEN-223【安全漏洞】当前被攻击的接口
+		// update-end-author:taoyan date:20211227 for: JTC-25 【online报表】oracle 操作问题 录入弹框啥都不填直接保存 ①编码不是应该提示必填么？②报错也应该是具体文字提示，不是后台错误日志
 		if (StringUtils.isNotBlank(duplicateCheckVo.getDataId())) {
 			// [2].编辑页面校验
 			num = sysDictMapper.duplicateCheckCountSql(duplicateCheckVo);

@@ -21,21 +21,30 @@
             :dropdownStyle="{maxHeight:'200px',overflow:'auto'}"
             :treeData="departTree"
             :expandAction="false"
-            :expandedKeys.sync="expandedKeys"
             @select="onDepSelect"
+            :load-data="onLoadDepartment"
           />
         </a-card>
       </a-col>
       <a-col :md="18" :sm="24">
         <a-card :bordered="false">
-          用户账号:
-          <a-input-search
-            :style="{width:'150px',marginBottom:'15px'}"
-            placeholder="请输入账号"
-            v-model="queryParam.username"
-            @search="onSearch"
-          ></a-input-search>
-          <a-button @click="searchReset(1)" style="margin-left: 20px" icon="redo">重置</a-button>
+          <a-form-model>
+            <a-form-model-item label="用户账号" :labelCol="labelCol" :wrapperCol="wrapperCol">
+              <a-row type="flex" :gutter="8">
+                <a-col :span="18">
+                  <a-input-search
+                      :style="{width:'100%'}"
+                      placeholder="请输入账号"
+                      v-model="queryParam.username"
+                      @search="onSearch"
+                  ></a-input-search>
+                </a-col>
+                <a-col :span="6">
+                  <a-button @click="searchReset(1)" icon="redo">重置</a-button>
+                </a-col>
+              </a-row>
+            </a-form-model-item>
+          </a-form-model>
           <!--用户列表-->
           <a-table
             ref="table"
@@ -57,13 +66,13 @@
 
 <script>
   import { pushIfNotExist, filterObj } from '@/utils/util'
-  import {queryDepartTreeList, getUserList, queryUserByDepId} from '@/api/api'
+  import {queryDepartTreeList, getUserList, queryUserByDepId, queryDepartTreeSync} from '@/api/api'
   import { getAction } from '@/api/manage'
 
   export default {
     name: 'JSelectUserByDepModal',
     components: {},
-    props: ['modalWidth', 'multi', 'userIds'],
+    props: ['modalWidth', 'multi', 'userIds', 'store', 'text'],
     data() {
       return {
         queryParam: {
@@ -133,6 +142,14 @@
         form: this.$form.createForm(this),
         loading: false,
         expandedKeys: [],
+        labelCol: {
+          xs: { span: 24 },
+          sm: { span: 4 },
+        },
+        wrapperCol: {
+          xs: { span: 24 },
+          sm: { span: 10 },
+        },
       }
     },
     computed: {
@@ -159,27 +176,27 @@
         if (this.userIds) {
           // 这里最后加一个 , 的原因是因为无论如何都要使用 in 查询，防止后台进行了模糊匹配，导致查询结果不准确
           let values = this.userIds.split(',') + ','
-          getUserList({
-            username: values,
-            pageNo: 1,
-            pageSize: values.length
-          }).then((res) => {
-            if (res.success) {
-              this.selectionRows = []
-              let selectedRowKeys = []
-              let realNames = []
-              res.result.records.forEach(user => {
-                realNames.push(user['realname'])
+          let param = {[this.store]: values}
+          getAction('/sys/user/getMultiUser', param).then((list)=>{
+            this.selectionRows = []
+            let selectedRowKeys = []
+            let textArray = []
+            if(list && list.length>0){
+              for(let user of list){
+                textArray.push(user[this.text])
                 selectedRowKeys.push(user['id'])
                 this.selectionRows.push(user)
-              })
-              this.selectedRowKeys = selectedRowKeys
-              this.$emit('initComp', realNames.join(','))
+              }
             }
+            this.selectedRowKeys = selectedRowKeys
+            this.$emit('initComp', textArray.join(','))
           })
+
         } else {
           // JSelectUserByDep组件bug issues/I16634
           this.$emit('initComp', '')
+          // 前端用户选择单选无法置空的问题 #2610
+          this.selectedRowKeys = []
         }
       },
       async loadData(arg) {
@@ -254,7 +271,7 @@
       handleSubmit() {
         let that = this;
         this.getSelectUserRows();
-        that.$emit('ok', that.selectUserRows, that.selectUserIds);
+        that.$emit('ok', that.selectUserRows);
         that.searchReset(0)
         that.close();
       },
@@ -297,14 +314,35 @@
         })
       },
       queryDepartTree() {
-        queryDepartTreeList().then((res) => {
+        //update-begin-author:taoyan date:20211202 for: 异步加载部门树 https://github.com/jeecgboot/jeecg-boot/issues/3196
+        this.expandedKeys = []
+        this.departTree = []
+        queryDepartTreeSync().then((res) => {
           if (res.success) {
-            this.departTree = res.result;
-            // 默认展开父节点
-            this.expandedKeys = this.departTree.map(item => item.id)
+            for (let i = 0; i < res.result.length; i++) {
+              let temp = res.result[i]
+              this.departTree.push(temp)
+            }
           }
         })
       },
+      onLoadDepartment(treeNode){
+        return new Promise(resolve => {
+          queryDepartTreeSync({pid:treeNode.dataRef.id}).then((res) =>  {
+            if (res.success) {
+              //判断chidlren是否为空，并修改isLeaf属性值
+              if(res.result.length == 0){
+                treeNode.dataRef['isLeaf']=true
+                return;
+              }else{
+                treeNode.dataRef['children']= res.result;
+              }
+            }
+          })
+          resolve();
+        });
+      },
+      //update-end-author:taoyan date:20211202 for: 异步加载部门树 https://github.com/jeecgboot/jeecg-boot/issues/3196
       modalFormOk() {
         this.loadData();
       }

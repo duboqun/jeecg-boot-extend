@@ -4,11 +4,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Nacos 启动类
- * 引用的nacos console 源码运行，简化开发
- * 生产建议从官网下载最新版配置运行
+ *
  * @author zyf
  */
 @SpringBootApplication(scanBasePackages = "com.alibaba.nacos")
@@ -30,6 +33,20 @@ public class JeecgNacosApplication {
         System.setProperty("nacos.standalone", standalone);
         System.setProperty("nacos.core.auth.enabled", enabled);
         System.setProperty("server.tomcat.basedir","logs");
+        //自定义启动端口号
+        System.setProperty("server.port","8848");
         SpringApplication.run(JeecgNacosApplication.class, args);
+    }
+
+    /**
+     * 默认跳转首页
+     *
+     * @param model
+     * @return
+     */
+    @GetMapping("/")
+    public String index(Model model, HttpServletResponse response) {
+        // 视图重定向 - 跳转
+        return "/nacos";
     }
 }

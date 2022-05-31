@@ -1,6 +1,7 @@
 package org.jeecg.modules.system.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -45,7 +46,7 @@ public class SysDepart implements Serializable {
 	/**描述*/
 	@Excel(name="描述",width=15)
 	private String description;
-	/**机构类别 1公司，2组织机构，2岗位*/
+	/**机构类别 1=公司，2=组织机构，3=岗位*/
 	@Excel(name="机构类别",width=15,dicCode="org_category")
 	private String orgCategory;
 	/**机构类型*/
@@ -85,6 +86,15 @@ public class SysDepart implements Serializable {
 	@JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     @DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss")
 	private Date updateTime;
+
+    //update-begin---author:wangshuai ---date:20200308  for：[JTC-119]在部门管理菜单下设置部门负责人，新增字段负责人ids和旧的负责人ids
+    /**部门负责人的ids*/
+	@TableField(exist = false)
+	private String directorUserIds;
+    /**旧的部门负责人的ids(用于比较删除和新增)*/
+	@TableField(exist = false)
+    private String oldDirectorUserIds;
+    //update-end---author:wangshuai ---date:20200308  for：[JTC-119]新增字段负责人ids和旧的负责人ids
 	
 	/**
 	 * 重写equals方法

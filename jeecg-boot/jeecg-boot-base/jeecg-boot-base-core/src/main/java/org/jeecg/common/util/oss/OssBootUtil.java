@@ -8,7 +8,10 @@ import com.aliyun.oss.model.OSSObject;
 import com.aliyun.oss.model.PutObjectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.http.fileupload.FileItemStream;
+import org.jeecg.common.constant.CommonConstant;
+import org.jeecg.common.constant.SymbolConstant;
 import org.jeecg.common.util.CommonUtils;
+import org.jeecg.common.util.filter.FileTypeFilter;
 import org.jeecg.common.util.filter.StrAttackFilter;
 import org.jeecg.common.util.oConvertUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +27,7 @@ import java.util.UUID;
 /**
  * @Description: 阿里云 oss 上传工具类(高依赖版)
  * @Date: 2019/5/10
+ * @author: jeecg-boot
  */
 @Slf4j
 public class OssBootUtil {
@@ -93,8 +97,8 @@ public class OssBootUtil {
      * @return oss 中的相对文件路径
      */
     public static String upload(MultipartFile file, String fileDir,String customBucket) {
-        String FILE_URL = null;
-        initOSS(endPoint, accessKeyId, accessKeySecret);
+        String filePath = null;
+        initOss(endPoint, accessKeyId, accessKeySecret);
         StringBuilder fileUrl = new StringBuilder();
         String newBucket = bucketName;
         if(oConvertUtils.isNotEmpty(customBucket)){
@@ -110,22 +114,25 @@ public class OssBootUtil {
             if("" == orgName){
               orgName=file.getName();
             }
+            //update-begin-author:liusq date:20210809 for: 过滤上传文件类型
+            FileTypeFilter.fileTypeFilter(file);
+            //update-end-author:liusq date:20210809 for: 过滤上传文件类型
             orgName = CommonUtils.getFileName(orgName);
             String fileName = orgName.indexOf(".")==-1
                               ?orgName + "_" + System.currentTimeMillis()
                               :orgName.substring(0, orgName.lastIndexOf(".")) + "_" + System.currentTimeMillis() + orgName.substring(orgName.lastIndexOf("."));
-            if (!fileDir.endsWith("/")) {
-                fileDir = fileDir.concat("/");
+            if (!fileDir.endsWith(SymbolConstant.SINGLE_SLASH)) {
+                fileDir = fileDir.concat(SymbolConstant.SINGLE_SLASH);
             }
             //update-begin-author:wangshuai date:20201012 for: 过滤上传文件夹名特殊字符，防止攻击
             fileDir=StrAttackFilter.filter(fileDir);
             //update-end-author:wangshuai date:20201012 for: 过滤上传文件夹名特殊字符，防止攻击
             fileUrl = fileUrl.append(fileDir + fileName);
 
-            if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith("http")) {
-                FILE_URL = staticDomain + "/" + fileUrl;
+            if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith(CommonConstant.STR_HTTP)) {
+                filePath = staticDomain + SymbolConstant.SINGLE_SLASH + fileUrl;
             } else {
-                FILE_URL = "https://" + newBucket + "." + endPoint + "/" + fileUrl;
+                filePath = "https://" + newBucket + "." + endPoint + SymbolConstant.SINGLE_SLASH + fileUrl;
             }
             PutObjectResult result = ossClient.putObject(newBucket, fileUrl.toString(), file.getInputStream());
             // 设置权限(公开读)
@@ -136,8 +143,11 @@ public class OssBootUtil {
         } catch (IOException e) {
             e.printStackTrace();
             return null;
+        }catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
-        return FILE_URL;
+        return filePath;
     }
 
     /**
@@ -147,7 +157,7 @@ public class OssBootUtil {
     */
     public static String getOriginalUrl(String url) {
         String originalDomain = "https://" + bucketName + "." + endPoint;
-        if(url.indexOf(staticDomain)!=-1){
+        if(oConvertUtils.isNotEmpty(staticDomain) && url.indexOf(staticDomain)!=-1){
             url = url.replace(staticDomain,originalDomain);
         }
         return url;
@@ -173,21 +183,21 @@ public class OssBootUtil {
      * @return oss 中的相对文件路径
      */
     public static String upload(FileItemStream file, String fileDir) {
-        String FILE_URL = null;
-        initOSS(endPoint, accessKeyId, accessKeySecret);
+        String filePath = null;
+        initOss(endPoint, accessKeyId, accessKeySecret);
         StringBuilder fileUrl = new StringBuilder();
         try {
             String suffix = file.getName().substring(file.getName().lastIndexOf('.'));
             String fileName = UUID.randomUUID().toString().replace("-", "") + suffix;
-            if (!fileDir.endsWith("/")) {
-                fileDir = fileDir.concat("/");
+            if (!fileDir.endsWith(SymbolConstant.SINGLE_SLASH)) {
+                fileDir = fileDir.concat(SymbolConstant.SINGLE_SLASH);
             }
             fileDir = StrAttackFilter.filter(fileDir);
             fileUrl = fileUrl.append(fileDir + fileName);
-            if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith("http")) {
-                FILE_URL = staticDomain + "/" + fileUrl;
+            if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith(CommonConstant.STR_HTTP)) {
+                filePath = staticDomain + SymbolConstant.SINGLE_SLASH + fileUrl;
             } else {
-                FILE_URL = "https://" + bucketName + "." + endPoint + "/" + fileUrl;
+                filePath = "https://" + bucketName + "." + endPoint + SymbolConstant.SINGLE_SLASH + fileUrl;
             }
             PutObjectResult result = ossClient.putObject(bucketName, fileUrl.toString(), file.openStream());
             // 设置权限(公开读)
@@ -199,7 +209,7 @@ public class OssBootUtil {
             e.printStackTrace();
             return null;
         }
-        return FILE_URL;
+        return filePath;
     }
 
     /**
@@ -220,10 +230,10 @@ public class OssBootUtil {
             newBucket = bucket;
         }
         String bucketUrl = "";
-        if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith("http")) {
-            bucketUrl = staticDomain + "/" ;
+        if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith(CommonConstant.STR_HTTP)) {
+            bucketUrl = staticDomain + SymbolConstant.SINGLE_SLASH ;
         } else {
-            bucketUrl = "https://" + newBucket + "." + endPoint + "/";
+            bucketUrl = "https://" + newBucket + "." + endPoint + SymbolConstant.SINGLE_SLASH;
         }
         url = url.replace(bucketUrl,"");
         ossClient.deleteObject(newBucket, url);
@@ -250,7 +260,10 @@ public class OssBootUtil {
             if(oConvertUtils.isNotEmpty(bucket)){
                 newBucket = bucket;
             }
-            initOSS(endPoint, accessKeyId, accessKeySecret);
+            initOss(endPoint, accessKeyId, accessKeySecret);
+            //update-begin---author:liusq  Date:20220120  for：替换objectName前缀，防止key不一致导致获取不到文件----
+            objectName = OssBootUtil.replacePrefix(objectName,bucket);
+            //update-end---author:liusq  Date:20220120  for：替换objectName前缀，防止key不一致导致获取不到文件----
             OSSObject ossObject = ossClient.getObject(newBucket,objectName);
             inputStream = new BufferedInputStream(ossObject.getObjectContent());
         }catch (Exception e){
@@ -259,14 +272,14 @@ public class OssBootUtil {
         return inputStream;
     }
 
-    /**
-     * 获取文件流
-     * @param objectName
-     * @return
-     */
-    public static InputStream getOssFile(String objectName){
-        return getOssFile(objectName,null);
-    }
+    ///**
+    // * 获取文件流
+    // * @param objectName
+    // * @return
+    // */
+    //public static InputStream getOssFile(String objectName){
+    //    return getOssFile(objectName,null);
+    //}
 
     /**
      * 获取文件外链
@@ -275,9 +288,12 @@ public class OssBootUtil {
      * @param expires
      * @return
      */
-    public static String getObjectURL(String bucketName, String objectName, Date expires) {
-        initOSS(endPoint, accessKeyId, accessKeySecret);
+    public static String getObjectUrl(String bucketName, String objectName, Date expires) {
+        initOss(endPoint, accessKeyId, accessKeySecret);
         try{
+            //update-begin---author:liusq  Date:20220120  for：替换objectName前缀，防止key不一致导致获取不到文件----
+            objectName = OssBootUtil.replacePrefix(objectName,bucketName);
+            //update-end---author:liusq  Date:20220120  for：替换objectName前缀，防止key不一致导致获取不到文件----
             if(ossClient.doesObjectExist(bucketName,objectName)){
                 URL url = ossClient.generatePresignedUrl(bucketName,objectName,expires);
                 return URLDecoder.decode(url.toString(),"UTF-8");
@@ -293,7 +309,7 @@ public class OssBootUtil {
      *
      * @return
      */
-    private static OSSClient initOSS(String endpoint, String accessKeyId, String accessKeySecret) {
+    private static OSSClient initOss(String endpoint, String accessKeyId, String accessKeySecret) {
         if (ossClient == null) {
             ossClient = new OSSClient(endpoint,
                     new DefaultCredentialProvider(accessKeyId, accessKeySecret),
@@ -310,13 +326,13 @@ public class OssBootUtil {
      * @return
      */
     public static String upload(InputStream stream, String relativePath) {
-        String FILE_URL = null;
+        String filePath = null;
         String fileUrl = relativePath;
-        initOSS(endPoint, accessKeyId, accessKeySecret);
-        if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith("http")) {
-            FILE_URL = staticDomain + "/" + relativePath;
+        initOss(endPoint, accessKeyId, accessKeySecret);
+        if (oConvertUtils.isNotEmpty(staticDomain) && staticDomain.toLowerCase().startsWith(CommonConstant.STR_HTTP)) {
+            filePath = staticDomain + SymbolConstant.SINGLE_SLASH + relativePath;
         } else {
-            FILE_URL = "https://" + bucketName + "." + endPoint + "/" + fileUrl;
+            filePath = "https://" + bucketName + "." + endPoint + SymbolConstant.SINGLE_SLASH + fileUrl;
         }
         PutObjectResult result = ossClient.putObject(bucketName, fileUrl.toString(),stream);
         // 设置权限(公开读)
@@ -324,8 +340,30 @@ public class OssBootUtil {
         if (result != null) {
             log.info("------OSS文件上传成功------" + fileUrl);
         }
-        return FILE_URL;
+        return filePath;
     }
 
-
+    /**
+     * 替换前缀，防止key不一致导致获取不到文件
+     * @param objectName 文件上传路径 key
+     * @param customBucket 自定义桶
+     * @date 2022-01-20
+     * @author lsq
+     * @return
+     */
+    private static String replacePrefix(String objectName,String customBucket){
+        log.info("------replacePrefix---替换前---objectName:{}",objectName);
+        if(oConvertUtils.isNotEmpty(staticDomain)){
+            objectName= objectName.replace(staticDomain+SymbolConstant.SINGLE_SLASH,"");
+        }else{
+            String newBucket = bucketName;
+            if(oConvertUtils.isNotEmpty(customBucket)){
+                newBucket = customBucket;
+            }
+            String path ="https://" + newBucket + "." + endPoint + SymbolConstant.SINGLE_SLASH;
+            objectName = objectName.replace(path,"");
+        }
+        log.info("------replacePrefix---替换后---objectName:{}",objectName);
+        return objectName;
+    }
 }

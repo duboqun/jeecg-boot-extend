@@ -12,6 +12,7 @@ import java.util.List;
 
 /**
  * 导出返回信息
+ * @author: jeecg-boot
  */
 @Slf4j
 public class ImportExcelUtil {
@@ -38,7 +39,7 @@ public class ImportExcelUtil {
         }
     }
 
-    public static List<String> importDateSave(List<Object> list, Class serviceClass,List<String> errorMessage,String errorFlag)  {
+    public static List<String> importDateSave(List<?> list, Class serviceClass, List<String> errorMessage, String errorFlag)  {
         IService bean =(IService) SpringContextUtils.getBean(serviceClass);
         for (int i = 0; i < list.size(); i++) {
             try {

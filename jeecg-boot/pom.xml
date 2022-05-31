@@ -2,61 +2,75 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jeecgframework.boot</groupId>
   <artifactId>jeecg-boot-parent</artifactId>
-  <version>2.4.5</version>
+  <version>3.2.0</version>
   <packaging>pom</packaging>
-  
+  <name>JEECG BOOT ${project.version}</name>
+
   	<parent>
 	    <groupId>org.springframework.boot</groupId>
 	    <artifactId>spring-boot-starter-parent</artifactId>
-	    <version>2.3.5.RELEASE</version>
+	    <version>2.6.6</version>
 	    <relativePath/>
 	</parent>
 
 	<properties>
-		<jeecgboot.version>2.4.5</jeecgboot.version>
+		<jeecgboot.version>3.2.0</jeecgboot.version>
 		<java.version>1.8</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-cloud.version>Hoxton.SR8</spring-cloud.version>
-        <spring-cloud-alibaba.version>2.2.3.RELEASE</spring-cloud-alibaba.version>
+
+		<!-- 微服务属性 -->
+		<skip.springboot.maven>false</skip.springboot.maven>
+        <spring-cloud.version>2021.0.0</spring-cloud.version>
+        <spring-cloud-alibaba.version>2021.1</spring-cloud-alibaba.version>
+		<alibaba.nacos.version>2.0.4</alibaba.nacos.version>
+
 		<xxl-job-core.version>2.2.0</xxl-job-core.version>
-        <fastjson.version>1.2.75</fastjson.version>
-		<knife4j-spring-boot-starter.version>2.0.8</knife4j-spring-boot-starter.version>
-		<knife4j-spring-ui.version>2.0.8</knife4j-spring-ui.version>
+        <fastjson.version>1.2.83</fastjson.version>
+		<knife4j-spring-boot-starter.version>3.0.3</knife4j-spring-boot-starter.version>
+		<knife4j-spring-ui.version>2.0.9</knife4j-spring-ui.version>
+		<!-- 数据库驱动 -->
 		<postgresql.version>42.2.6</postgresql.version>
 		<ojdbc6.version>11.2.0.3</ojdbc6.version>
 		<sqljdbc4.version>4.0</sqljdbc4.version>
-		<mysql-connector-java.version>8.0.21</mysql-connector-java.version>
-		<dynamic-datasource-spring-boot-starter.version>3.2.0</dynamic-datasource-spring-boot-starter.version>
-		<hutool-all.version>5.3.8</hutool-all.version>
-		<redisson.version>3.13.6</redisson.version>
+		<mysql-connector-java.version>8.0.27</mysql-connector-java.version>
+		<hutool.version>5.3.8</hutool.version>
+		<redisson.version>3.16.1</redisson.version>
 		<commons-beanutils.version>1.9.4</commons-beanutils.version>
 		<guava.version>29.0-jre</guava.version>
-		<mybatis-plus.version>3.4.1</mybatis-plus.version>
+
+		<!-- 持久层 -->
+		<mybatis-plus.version>3.5.1</mybatis-plus.version>
+		<dynamic-datasource-spring-boot-starter.version>3.2.0</dynamic-datasource-spring-boot-starter.version>
+		<minidao.version>1.9.0</minidao.version>
 		<druid.version>1.1.22</druid.version>
 		<commons.version>2.6</commons.version>
 		<aliyun-java-sdk-dysmsapi.version>2.1.0</aliyun-java-sdk-dysmsapi.version>
 		<aliyun.oss.version>3.11.2</aliyun.oss.version>
-		<shiro.version>1.7.1</shiro.version>
+		<!-- shiro -->
+		<shiro.version>1.8.0</shiro.version>
 		<java-jwt.version>3.11.0</java-jwt.version>
 		<shiro-redis.version>3.1.0</shiro-redis.version>
-		<codegenerate.version>1.3.3</codegenerate.version>
-		<autopoi-web.version>1.3.2</autopoi-web.version>
+		<codegenerate.version>1.3.8</codegenerate.version>
+		<autopoi-web.version>1.4.0</autopoi-web.version>
 		<minio.version>8.0.3</minio.version>
 		<justauth-spring-boot-starter.version>1.3.4</justauth-spring-boot-starter.version>
 		<dom4j.version>1.6.1</dom4j.version>
 		<qiniu-java-sdk.version>7.4.0</qiniu-java-sdk.version>
+		<!-- Log4j2爆雷漏洞 -->
+		<log4j2.version>2.17.0</log4j2.version>
+		<logback.version>1.2.9</logback.version>
 	</properties>
 
 	<modules>
         <module>jeecg-boot-base</module>
         <module>jeecg-boot-module-demo</module>
 		<module>jeecg-boot-module-activiti</module>
-		<module>jeecg-boot-module-system</module>
         <module>jeecg-boot-module-chat</module>
 
         <!-- 需要微服务，请打开注释
         <module>jeecg-boot-starter</module>
          <module>jeecg-cloud-module</module>-->
+        <module>jeecg-boot-module-system</module>
 	</modules>
 
 	<distributionManagement>
@@ -75,7 +89,7 @@
 		<repository>
             <id>aliyun</id>
             <name>aliyun Repository</name>
-            <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+            <url>https://maven.aliyun.com/repository/public</url>
             <snapshots>
 				<enabled>false</enabled>
 			</snapshots>
@@ -83,7 +97,7 @@
 		<repository>
             <id>jeecg</id>
             <name>jeecg Repository</name>
-            <url>http://maven.jeecg.org/nexus/content/repositories/jeecg</url>
+            <url>https://maven.jeecg.org/nexus/content/repositories/jeecg</url>
             <snapshots>
 				<enabled>false</enabled>
 			</snapshots>
@@ -94,6 +108,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<!-- Lombok -->
@@ -160,34 +179,52 @@
 				<version>${jeecgboot.version}</version>
 			</dependency>
 
-            <!--微服务模块-->
+            <!--微服务启动依赖-->
             <dependency>
                 <groupId>org.jeecgframework.boot</groupId>
                 <artifactId>jeecg-boot-starter-cloud</artifactId>
                 <version>${jeecgboot.version}</version>
             </dependency>
-
 			<!--xxl-job定时任务-->
 			<dependency>
 				<groupId>org.jeecgframework.boot</groupId>
 				<artifactId>jeecg-boot-starter-job</artifactId>
 				<version>${jeecgboot.version}</version>
 			</dependency>
-
 			<!--redis分布式锁-->
 			<dependency>
 				<groupId>org.jeecgframework.boot</groupId>
 				<artifactId>jeecg-boot-starter-lock</artifactId>
 				<version>${jeecgboot.version}</version>
 			</dependency>
-
 			<!--rabbitmq消息队列-->
 			<dependency>
 				<groupId>org.jeecgframework.boot</groupId>
 				<artifactId>jeecg-boot-starter-rabbitmq</artifactId>
 				<version>${jeecgboot.version}</version>
 			</dependency>
-
+			<!--分库分表shardingsphere-->
+			<dependency>
+				<groupId>org.jeecgframework.boot</groupId>
+				<artifactId>jeecg-boot-starter-shardingsphere</artifactId>
+				<version>${jeecgboot.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-core</artifactId>
+				<version>5.6.7.Final</version>
+				<exclusions>
+					<exclusion>
+						<groupId>commons-collections</groupId>
+						<artifactId>commons-collections</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>org.jeecgframework.boot</groupId>
+				<artifactId>hibernate-re</artifactId>
+				<version>3.2.0-beta</version>
+			</dependency>
 
 			<!-- 七牛云SDK -->
 			<dependency>
@@ -224,8 +261,13 @@
 			<!-- hutool工具类-->
 			<dependency>
 				<groupId>cn.hutool</groupId>
-				<artifactId>hutool-all</artifactId>
-				<version>${hutool-all.version}</version>
+				<artifactId>hutool-core</artifactId>
+				<version>${hutool.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>cn.hutool</groupId>
+				<artifactId>hutool-crypto</artifactId>
+				<version>${hutool.version}</version>
 			</dependency>
 
 			<!-- commons-beanutils -->
@@ -284,16 +326,28 @@
 					</exclusion>
 				</exclusions>
 			</dependency>
+			<!-- 企业微信和钉钉 api -->
+			<dependency>
+				<groupId>org.jeecgframework</groupId>
+				<artifactId>jeewx-api</artifactId>
+				<version>1.4.8</version>
+				<exclusions>
+					<exclusion>
+						<artifactId>commons-beanutils</artifactId>
+						<groupId>commons-beanutils</groupId>
+					</exclusion>
+					<exclusion>
+						<artifactId>commons-lang</artifactId>
+						<groupId>commons-lang</groupId>
+					</exclusion>
+				</exclusions>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
 	<build>
 		<plugins>
-			<!--<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-			 指定JDK编译版本 -->
+			<!-- 指定JDK编译版本 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -315,6 +369,7 @@
 	         <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
+				 <version>3.1.0</version>
                 <configuration>
                     <nonFilteredFileExtensions>
                         <nonFilteredFileExtension>woff</nonFilteredFileExtension>
@@ -356,13 +411,17 @@
                 <!--配置文件前缀-->
                 <prefix.name>jeecg</prefix.name>
                 <!--Nacos配置中心地址-->
-                <config.server-addr>127.0.0.1:8848</config.server-addr>
+                <config.server-addr>jeecg-boot-nacos:8848</config.server-addr>
                 <!--Nacos配置中心命名空间,用于支持多环境.这里必须使用ID，不能使用名称,默认为空-->
                 <config.namespace></config.namespace>
+				<!--Nacos用户名-->
+				<config.username>nacos</config.username>
+				<!--Nacos密码-->
+				<config.password>nacos</config.password>
                 <!--Nacos配置分组名称-->
                 <config.group>DEFAULT_GROUP</config.group>
                 <!--Nacos服务发现地址-->
-                <discovery.server-addr>127.0.0.1:8848</discovery.server-addr>
+                <discovery.server-addr>jeecg-boot-nacos:8848</discovery.server-addr>
             </properties>
         </profile>
         <!-- 测试 -->
@@ -374,13 +433,17 @@
                 <!--配置文件前缀-->
                 <prefix.name>jeecg</prefix.name>
                 <!--Nacos配置中心地址-->
-                <config.server-addr>127.0.0.1:8848</config.server-addr>
+                <config.server-addr>jeecg-boot-nacos:8848</config.server-addr>
                 <!--Nacos配置中心命名空间,用于支持多环境.这里必须使用ID，不能使用名称,默认为空-->
                 <config.namespace></config.namespace>
+				<!--Nacos用户名-->
+				<config.username>nacos</config.username>
+				<!--Nacos密码-->
+				<config.password>nacos</config.password>
                 <!--Nacos配置分组名称-->
                 <config.group>DEFAULT_GROUP</config.group>
                 <!--Nacos服务发现地址-->
-                <discovery.server-addr>127.0.0.1:8848</discovery.server-addr>
+                <discovery.server-addr>jeecg-boot-nacos:8848</discovery.server-addr>
             </properties>
         </profile>
         <!-- 生产 -->
@@ -392,14 +455,31 @@
                 <!--配置文件前缀-->
                 <prefix.name>jeecg</prefix.name>
                 <!--Nacos配置中心地址-->
-                <config.server-addr>127.0.0.1:8848</config.server-addr>
+                <config.server-addr>jeecg-boot-nacos:8848</config.server-addr>
                 <!--Nacos配置中心命名空间,用于支持多环境.这里必须使用ID，不能使用名称,默认为空-->
                 <config.namespace></config.namespace>
+				<!--Nacos用户名-->
+				<config.username>nacos</config.username>
+				<!--Nacos密码-->
+				<config.password>nacos</config.password>
                 <!--Nacos配置分组名称-->
                 <config.group>DEFAULT_GROUP</config.group>
                 <!--Nacos服务发现地址-->
-                <discovery.server-addr>127.0.0.1:8848</discovery.server-addr>
+                <discovery.server-addr>jeecg-boot-nacos:8848</discovery.server-addr>
             </properties>
         </profile>
+		<!-- SpringCloud运行环境 -->
+		<profile>
+			<id>SpringCloud</id>
+			<properties>
+				<!--微服务模式下修改为true, system模块跳过打包插件，否则微服务无法引用-->
+				<skip.springboot.maven>true</skip.springboot.maven>
+			</properties>
+			<modules>
+				<!-- 微服务模块 -->
+				<module>jeecg-boot-starter</module>
+				<module>jeecg-cloud-module</module>
+			</modules>
+		</profile>
     </profiles>
 </project>

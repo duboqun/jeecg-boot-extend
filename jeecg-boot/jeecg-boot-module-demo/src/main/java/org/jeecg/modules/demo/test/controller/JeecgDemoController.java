@@ -1,5 +1,6 @@
 package org.jeecg.modules.demo.test.controller;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -61,6 +62,7 @@ public class JeecgDemoController extends JeecgController<JeecgDemo, IJeecgDemoSe
     public Result<?> list(JeecgDemo jeecgDemo, @RequestParam(name = "pageNo", defaultValue = "1") Integer pageNo, @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
                           HttpServletRequest req) {
         QueryWrapper<JeecgDemo> queryWrapper = QueryGenerator.initQueryWrapper(jeecgDemo, req.getParameterMap());
+        queryWrapper.orderByDesc("create_time");
         Page<JeecgDemo> page = new Page<JeecgDemo>(pageNo, pageSize);
 
         IPage<JeecgDemo> pageList = jeecgDemoService.page(page, queryWrapper);
@@ -91,9 +93,9 @@ public class JeecgDemoController extends JeecgController<JeecgDemo, IJeecgDemoSe
      * @param jeecgDemo
      * @return
      */
-    @PutMapping(value = "/edit")
-    @ApiOperation(value = "编辑DEMO", notes = "编辑DEMO")
     @AutoLog(value = "编辑DEMO", operateType = CommonConstant.OPERATE_TYPE_3)
+    @ApiOperation(value = "编辑DEMO", notes = "编辑DEMO")
+    @RequestMapping(value = "/edit", method = {RequestMethod.PUT,RequestMethod.POST})
     public Result<?> edit(@RequestBody JeecgDemo jeecgDemo) {
         jeecgDemoService.updateById(jeecgDemo);
         return Result.OK("更新成功！");
@@ -237,6 +239,9 @@ public class JeecgDemoController extends JeecgController<JeecgDemo, IJeecgDemoSe
 
 
     // ==========================================动态表单 JSON接收测试===========================================
+    /**
+     * online新增数据
+     */
     @PostMapping(value = "/testOnlineAdd")
     public Result<?> testOnlineAdd(@RequestBody JSONObject json) {
         log.info(json.toJSONString());
@@ -282,4 +287,42 @@ public class JeecgDemoController extends JeecgController<JeecgDemo, IJeecgDemoSe
         return Result.OK(pageList);
     }
     /*----------------------------------------外部获取权限示例------------------------------------*/
+
+    /**
+     * online api增强 列表
+     * @param params
+     * @return
+     */
+    @PostMapping("/enhanceJavaListHttp")
+    public Result enhanceJavaListHttp(@RequestBody JSONObject params) {
+        log.info(" =========================================================== ");
+        log.info("params: " + params.toJSONString());
+        log.info("params.tableName: " + params.getString("tableName"));
+        log.info("params.json: " + params.getJSONObject("json").toJSONString());
+        JSONArray dataList = params.getJSONArray("dataList");
+        log.info("params.dataList: " + dataList.toJSONString());
+        log.info(" =========================================================== ");
+        return Result.OK(dataList);
+    }
+
+    /**
+     * online api增强 表单
+     * @param params
+     * @return
+     */
+    @PostMapping("/enhanceJavaFormHttp")
+    public Result enhanceJavaFormHttp(@RequestBody JSONObject params) {
+        log.info(" =========================================================== ");
+        log.info("params: " + params.toJSONString());
+        log.info("params.tableName: " + params.getString("tableName"));
+        log.info("params.json: " + params.getJSONObject("json").toJSONString());
+        log.info(" =========================================================== ");
+        return Result.OK("1");
+    }
+
+    @GetMapping(value = "/hello")
+    public String hello(HttpServletRequest req) {
+        return "hello world!";
+    }
+
 }

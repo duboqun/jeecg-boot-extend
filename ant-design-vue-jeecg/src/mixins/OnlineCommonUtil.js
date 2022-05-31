@@ -1,10 +1,12 @@
 import { formatDate } from '@/utils/util'
 import Area from '@/components/_util/Area'
+import { postAction } from '@/api/manage'
 
 const onlUtil = {
   data(){
     return {
-      mixin_pca:''
+      mixin_pca:'',
+      flowCodePre: 'onl_'
     }
   },
   created(){

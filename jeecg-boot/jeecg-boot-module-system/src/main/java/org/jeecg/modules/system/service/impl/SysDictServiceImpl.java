@@ -7,7 +7,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.jeecg.common.constant.CacheConstant;
 import org.jeecg.common.constant.CommonConstant;
+import org.jeecg.common.system.query.QueryGenerator;
+import org.jeecg.common.system.util.JwtUtil;
 import org.jeecg.common.system.vo.DictModel;
+import org.jeecg.common.system.vo.DictModelMany;
 import org.jeecg.common.system.vo.DictQuery;
 import org.jeecg.common.util.SqlInjectionUtil;
 import org.jeecg.common.util.oConvertUtils;
@@ -58,8 +61,27 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
 	}
 
 	@Override
+	@Cacheable(value = CacheConstant.SYS_ENABLE_DICT_CACHE,key = "#code", unless = "#result == null ")
+	public List<DictModel> queryEnableDictItemsByCode(String code) {
+		log.debug("无缓存dictCache的时候调用这里！");
+		return sysDictMapper.queryEnableDictItemsByCode(code);
+	}
+
+	@Override
+	public Map<String, List<DictModel>> queryDictItemsByCodeList(List<String> dictCodeList) {
+		List<DictModelMany> list = sysDictMapper.queryDictItemsByCodeList(dictCodeList);
+		Map<String, List<DictModel>> dictMap = new HashMap(5);
+		for (DictModelMany dict : list) {
+			List<DictModel> dictItemList = dictMap.computeIfAbsent(dict.getDictCode(), i -> new ArrayList<>());
+			dict.setDictCode(null);
+			dictItemList.add(new DictModel(dict.getValue(), dict.getText()));
+		}
+		return dictMap;
+	}
+
+	@Override
 	public Map<String, List<DictModel>> queryAllDictItems() {
-		Map<String, List<DictModel>> res = new HashMap<String, List<DictModel>>();
+		Map<String, List<DictModel>> res = new HashMap(5);
 		List<SysDict> ls = sysDictMapper.selectList(null);
 		LambdaQueryWrapper<SysDictItem> queryWrapper = new LambdaQueryWrapper<SysDictItem>();
 		queryWrapper.eq(SysDictItem::getStatus, 1);
@@ -91,6 +113,17 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
 	public String queryDictTextByKey(String code, String key) {
 		log.debug("无缓存dictText的时候调用这里！");
 		return sysDictMapper.queryDictTextByKey(code, key);
+	}
+
+	@Override
+	public Map<String, List<DictModel>> queryManyDictByKeys(List<String> dictCodeList, List<String> keys) {
+		List<DictModelMany> list = sysDictMapper.queryManyDictByKeys(dictCodeList, keys);
+		Map<String, List<DictModel>> dictMap = new HashMap(5);
+		for (DictModelMany dict : list) {
+			List<DictModel> dictItemList = dictMap.computeIfAbsent(dict.getDictCode(), i -> new ArrayList<>());
+			dictItemList.add(new DictModel(dict.getValue(), dict.getText()));
+		}
+		return dictMap;
 	}
 
 	/**
@@ -128,6 +161,19 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
 	public String queryTableDictTextByKey(String table,String text,String code, String key) {
 		log.debug("无缓存dictTable的时候调用这里！");
 		return sysDictMapper.queryTableDictTextByKey(table,text,code,key);
+	}
+
+	@Override
+	public List<DictModel> queryTableDictTextByKeys(String table, String text, String code, List<String> keys) {
+		//update-begin-author:taoyan date:20220113 for: @dict注解支持 dicttable 设置where条件
+		String filterSql = null;
+		if(table.toLowerCase().indexOf("where")>0){
+			String[] arr = table.split(" (?i)where ");
+			table = arr[0];
+			filterSql = arr[1];
+		}
+		return sysDictMapper.queryTableDictByKeysAndFilterSql(table, text, code, filterSql, keys);
+		//update-end-author:taoyan date:20220113 for: @dict注解支持 dicttable 设置where条件
 	}
 
 	@Override
@@ -182,13 +228,18 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Integer saveMain(SysDict sysDict, List<SysDictItem> sysDictItemList) {
 		int insert=0;
     	try{
 			 insert = sysDictMapper.insert(sysDict);
 			if (sysDictItemList != null) {
 				for (SysDictItem entity : sysDictItemList) {
+                    //update-begin---author:wangshuai ---date:20220211  for：[JTC-1168]如果字典项值为空，则字典项忽略导入------------
+				    if(oConvertUtils.isEmpty(entity.getItemValue())){
+				        return -1;
+                    }
+                    //update-end---author:wangshuai ---date:20220211  for：[JTC-1168]如果字典项值为空，则字典项忽略导入------------
 					entity.setDictId(sysDict.getId());
 					entity.setStatus(1);
 					sysDictItemMapper.insert(entity);
@@ -219,7 +270,7 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
 	public List<DictModel> queryLittleTableDictItems(String table, String text, String code, String condition, String keyword, int pageSize) {
     	Page<DictModel> page = new Page<DictModel>(1, pageSize);
 		page.setSearchCount(false);
-		String filterSql = getFilterSql(text, code, condition, keyword);
+		String filterSql = getFilterSql(table, text, code, condition, keyword);
 		IPage<DictModel> pageList = baseMapper.queryTableDictWithFilter(page, table, text, code, filterSql);
 		return pageList.getRecords();
 	}
@@ -232,12 +283,19 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
 	 * @param keyword
 	 * @return
 	 */
-	private String getFilterSql(String text, String code, String condition, String keyword){
+	private String getFilterSql(String table, String text, String code, String condition, String keyword){
 		String keywordSql = null, filterSql = "", sql_where = " where ";
+		// update-begin-author:sunjianlei date:20220112 for: 【JTC-631】判断如果 table 携带了 where 条件，那么就使用 and 查询，防止报错
+		if (table.toLowerCase().contains(" where ")) {
+			sql_where = " and ";
+		}
+		// update-end-author:sunjianlei date:20220112 for: 【JTC-631】判断如果 table 携带了 where 条件，那么就使用 and 查询，防止报错
 		if(oConvertUtils.isNotEmpty(keyword)){
 			// 判断是否是多选
 			if (keyword.contains(",")) {
-				String inKeywords = "\"" + keyword.replaceAll(",", "\",\"") + "\"";
+                //update-begin--author:scott--date:20220105--for：JTC-529【表单设计器】 编辑页面报错，in参数采用双引号导致 ----
+				String inKeywords = "'" + String.join("','", keyword.split(",")) + "'";
+                //update-end--author:scott--date:20220105--for：JTC-529【表单设计器】 编辑页面报错，in参数采用双引号导致----
 				keywordSql = "(" + text + " in (" + inKeywords + ") or " + code + " in (" + inKeywords + "))";
 			} else {
 				keywordSql = "("+text + " like '%"+keyword+"%' or "+ code + " like '%"+keyword+"%')";
@@ -254,14 +312,20 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
 	}
 	@Override
 	public List<DictModel> queryAllTableDictItems(String table, String text, String code, String condition, String keyword) {
-		String filterSql = getFilterSql(text, code, condition, keyword);
+		String filterSql = getFilterSql(table, text, code, condition, keyword);
 		List<DictModel> ls = baseMapper.queryAllTableDictItems(table, text, code, filterSql);
     	return ls;
 	}
 
 	@Override
 	public List<TreeSelectModel> queryTreeList(Map<String, String> query,String table, String text, String code, String pidField,String pid,String hasChildField) {
-		return baseMapper.queryTreeList(query,table, text, code, pidField, pid,hasChildField);
+		List<TreeSelectModel> result = baseMapper.queryTreeList(query, table, text, code, pidField, pid, hasChildField);
+		// udapte-begin-author:sunjianlei date:20220110 for: 【JTC-597】如果 query 有值，就不允许展开子节点
+		if (query != null) {
+			result.forEach(r -> r.setLeaf(true));
+		}
+		return result;
+		// udapte-end-author:sunjianlei date:20220110 for: 【JTC-597】如果 query 有值，就不允许展开子节点
 	}
 
 	@Override
@@ -328,6 +392,11 @@ public class SysDictServiceImpl extends ServiceImpl<SysDictMapper, SysDict> impl
 				return null;
 			} else if (params.length == 4) {
 				condition = params[3];
+				// update-begin-author:taoyan date:20220314 for: online表单下拉搜索框表字典配置#{sys_org_code}报错 #3500
+				if(condition.indexOf("#{")>=0){
+					condition =  QueryGenerator.getSqlRuleValue(condition);
+				}
+				// update-end-author:taoyan date:20220314 for: online表单下拉搜索框表字典配置#{sys_org_code}报错 #3500
 			}
 			List<DictModel> ls;
 			if (pageSize != null) {

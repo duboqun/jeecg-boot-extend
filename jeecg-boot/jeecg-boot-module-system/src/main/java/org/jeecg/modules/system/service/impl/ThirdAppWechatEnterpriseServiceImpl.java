@@ -2,6 +2,7 @@ package org.jeecg.modules.system.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.jeecg.qywx.api.base.JwAccessTokenAPI;
 import com.jeecg.qywx.api.core.common.AccessToken;
 import com.jeecg.qywx.api.department.JwDepartmentAPI;
@@ -26,7 +27,9 @@ import org.jeecg.common.util.oConvertUtils;
 import org.jeecg.config.thirdapp.ThirdAppConfig;
 import org.jeecg.modules.system.entity.*;
 import org.jeecg.modules.system.mapper.SysAnnouncementSendMapper;
+import org.jeecg.modules.system.mapper.SysUserMapper;
 import org.jeecg.modules.system.model.SysDepartTreeModel;
+import org.jeecg.modules.system.model.ThirdLoginModel;
 import org.jeecg.modules.system.service.*;
 import org.jeecg.modules.system.vo.thirdapp.JwDepartmentTreeVo;
 import org.jeecg.modules.system.vo.thirdapp.SyncInfoVo;
@@ -42,6 +45,7 @@ import java.util.stream.Collectors;
 
 /**
  * 第三方App对接：企业微信实现类
+ * @author: jeecg-boot
  */
 @Slf4j
 @Service
@@ -52,7 +56,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
     @Autowired
     private ISysDepartService sysDepartService;
     @Autowired
-    private ISysUserService sysUserService;
+    private SysUserMapper userMapper;
     @Autowired
     private ISysThirdAccountService sysThirdAccountService;
     @Autowired
@@ -61,6 +65,11 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
     private ISysPositionService sysPositionService;
     @Autowired
     private SysAnnouncementSendMapper sysAnnouncementSendMapper;
+
+    /**
+     * 第三方APP类型，当前固定为 wechat_enterprise
+     */
+    public final String THIRD_TYPE = ThirdAppConfig.WECHAT_ENTERPRISE.toLowerCase();
 
     @Override
     public String getAccessToken() {
@@ -92,15 +101,18 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
     }
 
     @Override
-    public boolean syncLocalDepartmentToThirdApp(String ids) {
+    public SyncInfoVo syncLocalDepartmentToThirdApp(String ids) {
+        SyncInfoVo syncInfo = new SyncInfoVo();
         String accessToken = this.getAccessToken();
         if (accessToken == null) {
-            return false;
+            syncInfo.addFailInfo("accessToken获取失败！");
+            return syncInfo;
         }
         // 获取企业微信所有的部门
         List<Department> departments = JwDepartmentAPI.getAllDepartment(accessToken);
         if (departments == null) {
-            return false;
+            syncInfo.addFailInfo("获取企业微信所有部门失败！");
+            return syncInfo;
         }
         // 删除企业微信有但本地没有的部门（以本地部门数据为主）(以为企业微信不能创建同名部门，所以只能先删除）
         List<JwDepartmentTreeVo> departmentTreeList = JwDepartmentTreeVo.listToTree(departments);
@@ -113,10 +125,15 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
         // 递归同步部门
         departments = JwDepartmentAPI.getAllDepartment(accessToken);
         this.syncDepartmentRecursion(sysDepartsTree, departments, parent, accessToken);
-        return true;
+        return syncInfo;
     }
 
-    // 递归删除部门以及子部门，由于企业微信不允许删除带有成员和子部门的部门，所以需要递归删除下子部门，然后把部门成员移动端根部门下
+    /**
+     * 递归删除部门以及子部门，由于企业微信不允许删除带有成员和子部门的部门，所以需要递归删除下子部门，然后把部门成员移动端根部门下
+     * @param children
+     * @param accessToken
+     * @param ifLocal
+     */
     private void deleteDepartRecursion(List<JwDepartmentTreeVo> children, String accessToken, boolean ifLocal) {
         for (JwDepartmentTreeVo departmentTree : children) {
             String depId = departmentTree.getId();
@@ -155,7 +172,13 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
         }
     }
 
-    // 递归同步部门到第三方APP
+    /**
+     * 递归同步部门到第三方APP
+     * @param sysDepartsTree
+     * @param departments
+     * @param parent
+     * @param accessToken
+     */
     private void syncDepartmentRecursion(List<SysDepartTreeModel> sysDepartsTree, List<Department> departments, Department parent, String accessToken) {
         if (sysDepartsTree != null && sysDepartsTree.size() != 0) {
             for1:
@@ -246,6 +269,11 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
                     SysDepart newSysDepart = this.qwDepartmentToSysDepart(departmentTree, null);
                     if (sysParentId != null) {
                         newSysDepart.setParentId(sysParentId);
+                        // 2 = 组织机构
+                        newSysDepart.setOrgCategory("2");
+                    } else {
+                        // 1 = 公司
+                        newSysDepart.setOrgCategory("1");
                     }
                     try {
                         sysDepartService.saveDepartData(newSysDepart, username);
@@ -283,10 +311,10 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
             LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.in(SysUser::getId, (Object[]) idList);
             // 获取本地指定用户
-            sysUsers = sysUserService.list(queryWrapper);
+            sysUsers = userMapper.selectList(queryWrapper);
         } else {
             // 获取本地所有用户
-            sysUsers = sysUserService.list();
+            sysUsers = userMapper.selectList(Wrappers.emptyWrapper());
         }
 
         // 循环判断新用户和需要更新的用户
@@ -302,7 +330,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
              * 2. 本地表里没有，就先用手机号判断，不通过再用username判断。
              */
             User qwUser;
-            SysThirdAccount sysThirdAccount = sysThirdAccountService.getOneBySysUserId(sysUser.getId(), ThirdAppConfig.WECHAT_ENTERPRISE.toLowerCase());
+            SysThirdAccount sysThirdAccount = sysThirdAccountService.getOneBySysUserId(sysUser.getId(), THIRD_TYPE);
             for (User qwUserTemp : qwUsers) {
                 if (sysThirdAccount == null || oConvertUtils.isEmpty(sysThirdAccount.getThirdUserId()) || !sysThirdAccount.getThirdUserId().equals(qwUserTemp.getUserid())) {
                     // sys_third_account 表匹配失败，尝试用手机号匹配
@@ -352,7 +380,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
             return syncInfo;
         }
         //查询本地用户
-        List<SysUser> sysUsersList = sysUserService.list();
+        List<SysUser> sysUsersList = userMapper.selectList(Wrappers.emptyWrapper());
         // 循环判断新用户和需要更新的用户
         for (User qwUser : qwUsersList) {
             /*
@@ -360,7 +388,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
              * 1. 查询 sys_third_account（第三方账号表）是否有数据，如果有代表已同步
              * 2. 本地表里没有，就先用手机号判断，不通过再用username判断。
              */
-            SysThirdAccount sysThirdAccount = sysThirdAccountService.getOneByThirdUserId(qwUser.getUserid(), ThirdAppConfig.WECHAT_ENTERPRISE.toLowerCase());
+            SysThirdAccount sysThirdAccount = sysThirdAccountService.getOneByThirdUserId(qwUser.getUserid(), THIRD_TYPE);
             List<SysUser> collect = sysUsersList.stream().filter(user -> (qwUser.getMobile().equals(user.getPhone()) || qwUser.getUserid().equals(user.getUsername()))
                                                                 ).collect(Collectors.toList());
 
@@ -369,7 +397,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
                 // 循环到此说明用户匹配成功，进行更新操作
                 SysUser updateSysUser = this.qwUserToSysUser(qwUser, sysUserTemp);
                 try {
-                    sysUserService.updateById(updateSysUser);
+                    userMapper.updateById(updateSysUser);
                     String str = String.format("用户 %s(%s) 更新成功！", updateSysUser.getRealname(), updateSysUser.getUsername());
                     syncInfo.addSuccessInfo(str);
                 } catch (Exception e) {
@@ -382,7 +410,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
                 // 没匹配到用户则走新增逻辑
                 SysUser newSysUser = this.qwUserToSysUser(qwUser);
                 try {
-                    sysUserService.save(newSysUser);
+                    userMapper.insert(newSysUser);
                     String str = String.format("用户 %s(%s) 创建成功！", newSysUser.getRealname(), newSysUser.getUsername());
                     syncInfo.addSuccessInfo(str);
                 } catch (Exception e) {
@@ -407,7 +435,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
             sysThirdAccount.setSysUserId(sysUserId);
             sysThirdAccount.setStatus(1);
             sysThirdAccount.setDelFlag(0);
-            sysThirdAccount.setThirdType(ThirdAppConfig.WECHAT_ENTERPRISE.toLowerCase());
+            sysThirdAccount.setThirdType(THIRD_TYPE);
         }
         sysThirdAccount.setThirdUserId(qwUserId);
         sysThirdAccountService.saveOrUpdate(sysThirdAccount);
@@ -545,7 +573,8 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
                 user.setEnable(1);
             }
         }
-        user.setTelephone(sysUser.getTelephone());// 座机号
+        // 座机号
+        user.setTelephone(sysUser.getTelephone());
         // --- 企业微信没有逻辑删除的功能
         // update-begin--Author:sunjianlei Date:20210520 for：本地逻辑删除的用户，在企业微信里禁用 -----
         if (CommonConstant.DEL_FLAG_1.equals(sysUser.getDelFlag())) {
@@ -581,6 +610,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
     private SysUser qwUserToSysUser(User user) {
         SysUser sysUser = new SysUser();
         sysUser.setDelFlag(0);
+        sysUser.setStatus(1);
         // 通过 username 来关联
         sysUser.setUsername(user.getUserid());
         // 密码默认为 “123456”，随机加盐
@@ -599,6 +629,10 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
         BeanUtils.copyProperties(oldSysUser, sysUser);
         sysUser.setRealname(qwUser.getName());
         sysUser.setPost(qwUser.getPosition());
+        // 设置工号，由于企业微信没有工号的概念，所以只能用 userId 代替
+        if (oConvertUtils.isEmpty(sysUser.getWorkNo())) {
+            sysUser.setWorkNo(qwUser.getUserid());
+        }
         try {
             sysUser.setSex(Integer.parseInt(qwUser.getGender()));
         } catch (NumberFormatException ignored) {
@@ -622,7 +656,8 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
         if (qwUser.getEnable() != null) {
             sysUser.setStatus(qwUser.getEnable() == 1 ? 1 : 2);
         }
-        sysUser.setTelephone(qwUser.getTelephone());// 座机号
+        // 座机号
+        sysUser.setTelephone(qwUser.getTelephone());
 
         // --- 企业微信没有逻辑删除的功能
         // sysUser.setDelFlag()
@@ -680,7 +715,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
                 return count;
             }
             LambdaQueryWrapper<SysThirdAccount> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(SysThirdAccount::getThirdType, ThirdAppConfig.WECHAT_ENTERPRISE.toLowerCase());
+            queryWrapper.eq(SysThirdAccount::getThirdType, THIRD_TYPE);
             queryWrapper.in(SysThirdAccount::getSysUserId, userIdList);
             // 根据userId，获取第三方用户的id
             List<SysThirdAccount> thirdAccountList = sysThirdAccountService.list(queryWrapper);
@@ -723,7 +758,7 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
         }
         Text text = new Text();
         text.setMsgtype("text");
-        text.setTouser(this.getTouser(message.getToUser(), message.isToAll()));
+        text.setTouser(this.getTouser(message.getToUser(), message.getToAll()));
         TextEntity entity = new TextEntity();
         entity.setContent(message.getContent());
         text.setText(entity);
@@ -762,7 +797,11 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
                 SysAnnouncementSend sysAnnouncementSend = sysAnnouncementSendMapper.selectOne(queryWrapper);
                 userIds = new String[] {sysAnnouncementSend.getUserId()};
             }
-            List<String> usernameList = sysUserService.userIdToUsername(Arrays.asList(userIds));
+
+            LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.in(SysUser::getId, userIds);
+            List<SysUser> userList = userMapper.selectList(queryWrapper);
+            List<String> usernameList = userList.stream().map(SysUser::getUsername).collect(Collectors.toList());
             usernameString = String.join(",", usernameList);
         }
 
@@ -781,10 +820,92 @@ public class ThirdAppWechatEnterpriseServiceImpl implements IThirdAppService {
         } else {
             String[] toUsers = origin.split(",");
             // 通过第三方账号表查询出第三方userId
-            List<SysThirdAccount> thirdAccountList = sysThirdAccountService.listThirdUserIdByUsername(toUsers, ThirdAppConfig.WECHAT_ENTERPRISE.toLowerCase());
+            List<SysThirdAccount> thirdAccountList = sysThirdAccountService.listThirdUserIdByUsername(toUsers, THIRD_TYPE);
             List<String> toUserList = thirdAccountList.stream().map(SysThirdAccount::getThirdUserId).collect(Collectors.toList());
             // 多个接收者用‘|’分隔
             return String.join("|", toUserList);
+        }
+    }
+
+    /**
+     * 根据第三方登录获取到的code来获取第三方app的用户ID
+     *
+     * @param code
+     * @return
+     */
+    public String getUserIdByThirdCode(String code, String accessToken) {
+        JSONObject response = JwUserAPI.getUserInfoByCode(code, accessToken);
+        if (response != null) {
+            log.info("response: " + response.toJSONString());
+            if (response.getIntValue("errcode") == 0) {
+                return response.getString("UserId");
+            }
+        }
+        return null;
+    }
+
+    /**
+     * OAuth2登录，成功返回登录的SysUser，失败返回null
+     */
+    public SysUser oauth2Login(String code) {
+        String accessToken = this.getAppAccessToken();
+        if (accessToken == null) {
+            return null;
+        }
+        String appUserId = this.getUserIdByThirdCode(code, accessToken);
+        if (appUserId != null) {
+            // 判断第三方用户表有没有这个人
+            LambdaQueryWrapper<SysThirdAccount> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(SysThirdAccount::getThirdUserUuid, appUserId);
+            queryWrapper.or().eq(SysThirdAccount::getThirdUserId, appUserId);
+            queryWrapper.eq(SysThirdAccount::getThirdType, THIRD_TYPE);
+            SysThirdAccount thirdAccount = sysThirdAccountService.getOne(queryWrapper);
+            if (thirdAccount != null) {
+                return this.getSysUserByThird(thirdAccount, null, appUserId, accessToken);
+            } else {
+                // 直接创建新账号
+                User appUser = JwUserAPI.getUserByUserid(appUserId, accessToken);
+                ThirdLoginModel tlm = new ThirdLoginModel(THIRD_TYPE, appUser.getUserid(), appUser.getName(), appUser.getAvatar());
+                thirdAccount = sysThirdAccountService.saveThirdUser(tlm);
+                return this.getSysUserByThird(thirdAccount, appUser, null, null);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据第三方账号获取本地账号，如果不存在就创建
+     *
+     * @param thirdAccount
+     * @param appUser
+     * @param appUserId
+     * @param accessToken
+     * @return
+     */
+    private SysUser getSysUserByThird(SysThirdAccount thirdAccount, User appUser, String appUserId, String accessToken) {
+        String sysUserId = thirdAccount.getSysUserId();
+        if (oConvertUtils.isNotEmpty(sysUserId)) {
+            return userMapper.selectById(sysUserId);
+        } else {
+            // 如果没有 sysUserId ，说明没有绑定账号，获取到手机号之后进行绑定
+            if (appUser == null) {
+                appUser = JwUserAPI.getUserByUserid(appUserId, accessToken);
+            }
+            // 判断系统里是否有这个手机号的用户
+            SysUser sysUser = userMapper.getUserByPhone(appUser.getMobile());
+            if (sysUser != null) {
+                thirdAccount.setAvatar(appUser.getAvatar());
+                thirdAccount.setRealname(appUser.getName());
+                thirdAccount.setThirdUserId(appUser.getUserid());
+                thirdAccount.setThirdUserUuid(appUser.getUserid());
+                thirdAccount.setSysUserId(sysUser.getId());
+                sysThirdAccountService.updateById(thirdAccount);
+                return sysUser;
+            } else {
+                // 没有就走创建逻辑
+                return sysThirdAccountService.createUser(appUser.getMobile(), appUser.getUserid());
+            }
+
         }
     }
 

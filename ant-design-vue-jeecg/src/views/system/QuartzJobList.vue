@@ -64,6 +64,7 @@
         :pagination="ipagination"
         :loading="loading"
         :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}"
+        :scroll="{x:true}"
         @change="handleTableChange">
 
         <!-- 字符串超长截取省略号显示-->
@@ -83,7 +84,7 @@
           <a-dropdown>
             <a class="ant-dropdown-link">更多 <a-icon type="down" /></a>
             <a-menu slot="overlay">
-              <a-menu-item><a @click="executeImmediately(record)">立即执行</a></a-menu-item>
+              <a-menu-item><a @click="executeImmediately(record)">执行一次</a></a-menu-item>
               <a-menu-item><a @click="handleEdit(record)">编辑</a></a-menu-item>
               <a-menu-item>
                 <a-popconfirm title="确定删除吗?" @confirm="() => handleDelete(record.id)">
@@ -214,7 +215,12 @@
           this.isorter.order = "ascend" == sorter.order ? "asc" : "desc"
         }
         //这种筛选方式只支持单选
-        this.filters.status = filters.status[0];
+        
+        // update-begin-author:liusq date:20210624 for:前台定时任务无法翻页  #2666
+        if(filters && Object.keys(filters).length>0 && filters.status){
+          this.filters.status = filters.status[0];
+        }
+        // update-end-author:liusq date:20210624 for:前台定时任务无法翻页  #2666
         this.ipagination = pagination;
         this.loadData();
       },

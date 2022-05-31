@@ -26,9 +26,17 @@ public class JeecgElasticsearchTemplate {
     /** es服务地址 */
     private String baseUrl;
     private final String FORMAT_JSON = "format=json";
+    /** Elasticsearch 的版本号 */
+    private String version = null;
 
-    // ElasticSearch 最大可返回条目数
+    /**ElasticSearch 最大可返回条目数*/
     public static final int ES_MAX_SIZE = 10000;
+
+    /**es7*/
+    public static final String IE_SEVEN = "7";
+
+    /**url not found 404*/
+    public static final String URL_NOT_FOUND = "404 Not Found";
 
     public JeecgElasticsearchTemplate(@Value("${jeecg.elasticsearch.cluster-nodes}") String baseUrl, @Value("${jeecg.elasticsearch.check-enabled}") boolean checkEnabled) {
         log.debug("JeecgElasticsearchTemplate BaseURL：" + baseUrl);
@@ -37,11 +45,27 @@ public class JeecgElasticsearchTemplate {
             // 验证配置的ES地址是否有效
             if (checkEnabled) {
                 try {
-                    RestUtil.get(this.getBaseUrl().toString());
+                    this.getElasticsearchVersion();
                     log.info("ElasticSearch 服务连接成功");
+                    log.info("ElasticSearch version: " + this.version);
                 } catch (Exception e) {
+                    this.version = "";
                     log.warn("ElasticSearch 服务连接失败，原因：配置未通过。可能是BaseURL未配置或配置有误，也可能是Elasticsearch服务未启动。接下来将会拒绝执行任何方法！");
                 }
+            }
+        }
+    }
+
+    /**
+     * 获取 Elasticsearch 的版本号信息，失败返回null
+     */
+    private void getElasticsearchVersion() {
+        if (this.version == null) {
+            String url = this.getBaseUrl().toString();
+            JSONObject result = RestUtil.get(url);
+            if (result != null) {
+                JSONObject v = result.getJSONObject("version");
+                this.version = v.getString("number");
             }
         }
     }
@@ -63,7 +87,7 @@ public class JeecgElasticsearchTemplate {
     /**
      * cat 查询ElasticSearch系统数据，返回json
      */
-    public <T> ResponseEntity<T> _cat(String urlAfter, Class<T> responseType) {
+    private <T> ResponseEntity<T> cat(String urlAfter, Class<T> responseType) {
         String url = this.getBaseUrl().append("/_cat").append(urlAfter).append("?").append(FORMAT_JSON).toString();
         return RestUtil.request(url, HttpMethod.GET, null, null, null, responseType);
     }
@@ -88,7 +112,7 @@ public class JeecgElasticsearchTemplate {
         if (!StringUtils.isEmpty(indexName)) {
             urlAfter.append("/").append(indexName.trim().toLowerCase());
         }
-        return _cat(urlAfter.toString(), JSONArray.class).getBody();
+        return cat(urlAfter.toString(), JSONArray.class).getBody();
     }
 
     /**
@@ -185,6 +209,11 @@ public class JeecgElasticsearchTemplate {
      */
     public JSONObject getIndexMapping(String indexName, String typeName) {
         String url = this.getBaseUrl(indexName, typeName).append("/_mapping?").append(FORMAT_JSON).toString();
+        // 针对 es 7.x 版本做兼容
+        this.getElasticsearchVersion();
+        if (oConvertUtils.isNotEmpty(this.version) && this.version.startsWith(IE_SEVEN)) {
+            url += "&include_type_name=true";
+        }
         log.info("getIndexMapping-url:" + url);
         /*
          * 参考返回JSON结构：
@@ -220,7 +249,7 @@ public class JeecgElasticsearchTemplate {
             return RestUtil.get(url);
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             String message = e.getMessage();
-            if (message != null && message.contains("404 Not Found")) {
+            if (message != null && message.contains(URL_NOT_FOUND)) {
                 return null;
             }
             throw e;
@@ -236,7 +265,7 @@ public class JeecgElasticsearchTemplate {
      */
     public <T> Map<String, T> getIndexMappingFormat(String indexName, String typeName, Class<T> clazz) {
         JSONObject mapping = this.getIndexMapping(indexName, typeName);
-        Map<String, T> map = new HashMap<>();
+        Map<String, T> map = new HashMap<>(5);
         if (mapping == null) {
             return map;
         }
@@ -339,7 +368,7 @@ public class JeecgElasticsearchTemplate {
      */
     public boolean saveBatch(String indexName, String typeName, JSONArray dataList) {
         String url = this.getBaseUrl().append("/_bulk").append("?refresh=wait_for").toString();
-        StringBuilder bodySB = new StringBuilder();
+        StringBuilder bodySb = new StringBuilder();
         for (int i = 0; i < dataList.size(); i++) {
             JSONObject data = dataList.getJSONObject(i);
             String id = data.getString("id");
@@ -351,14 +380,14 @@ public class JeecgElasticsearchTemplate {
             actionInfo.put("_index", indexName);
             actionInfo.put("_type", typeName);
             action.put("create", actionInfo);
-            bodySB.append(action.toJSONString()).append("\n");
+            bodySb.append(action.toJSONString()).append("\n");
             // 该行的数据
             data.remove("id");
-            bodySB.append(data.toJSONString()).append("\n");
+            bodySb.append(data.toJSONString()).append("\n");
         }
-        System.out.println("+-+-+-: bodySB.toString(): " + bodySB.toString());
+        System.out.println("+-+-+-: bodySb.toString(): " + bodySb.toString());
         HttpHeaders headers = RestUtil.getHeaderApplicationJson();
-        RestUtil.request(url, HttpMethod.PUT, headers, null, bodySB, JSONObject.class);
+        RestUtil.request(url, HttpMethod.PUT, headers, null, bodySb, JSONObject.class);
         return true;
     }
 
@@ -414,16 +443,16 @@ public class JeecgElasticsearchTemplate {
     }
 
     /**
-     * @param _source （源滤波器）指定返回的字段，传null返回所有字段
+     * @param source （源滤波器）指定返回的字段，传null返回所有字段
      * @param query
      * @param from    从第几条数据开始
      * @param size    返回条目数
      * @return { "query": query }
      */
-    public JSONObject buildQuery(List<String> _source, JSONObject query, int from, int size) {
+    public JSONObject buildQuery(List<String> source, JSONObject query, int from, int size) {
         JSONObject json = new JSONObject();
-        if (_source != null) {
-            json.put("_source", _source);
+        if (source != null) {
+            json.put("_source", source);
         }
         json.put("query", query);
         json.put("from", from);

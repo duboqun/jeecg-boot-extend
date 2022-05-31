@@ -69,7 +69,7 @@ public class SysDepartPermissionServiceImpl extends ServiceImpl<SysDepartPermiss
     @Override
     public List<SysPermissionDataRule> getPermRuleListByDeptIdAndPermId(String departId, String permissionId) {
         SysDepartPermission departPermission = this.getOne(new QueryWrapper<SysDepartPermission>().lambda().eq(SysDepartPermission::getDepartId, departId).eq(SysDepartPermission::getPermissionId, permissionId));
-        if(departPermission != null){
+        if(departPermission != null && oConvertUtils.isNotEmpty(departPermission.getDataRuleIds())){
             LambdaQueryWrapper<SysPermissionDataRule> query = new LambdaQueryWrapper<SysPermissionDataRule>();
             query.in(SysPermissionDataRule::getId, Arrays.asList(departPermission.getDataRuleIds().split(",")));
             query.orderByDesc(SysPermissionDataRule::getCreateTime);
@@ -96,7 +96,7 @@ public class SysDepartPermissionServiceImpl extends ServiceImpl<SysDepartPermiss
 
         String[] mainArr = main.split(",");
         String[] diffArr = diff.split(",");
-        Map<String, Integer> map = new HashMap<>();
+        Map<String, Integer> map = new HashMap(5);
         for (String string : mainArr) {
             map.put(string, 1);
         }

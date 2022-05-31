@@ -3,6 +3,10 @@ package org.jeecg.common.system.vo;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
+/**
+ * @Description: 数据源
+ * @author: jeecg-boot
+ */
 @Data
 public class DynamicDataSourceModel {
 
@@ -36,10 +40,12 @@ public class DynamicDataSourceModel {
      * 数据源地址
      */
     private java.lang.String dbUrl;
-    /**
-     * 数据库名称
-     */
-    private java.lang.String dbName;
+
+//    /**
+//     * 数据库名称
+//     */
+//    private java.lang.String dbName;
+
     /**
      * 用户名
      */

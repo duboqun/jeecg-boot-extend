@@ -1,6 +1,6 @@
 {
   "name": "vue-antd-jeecg",
-  "version": "2.4.5",
+  "version": "3.1.0",
   "private": true,
   "scripts": {
     "pre": "cnpm install || yarn --registry https://registry.npm.taobao.org || npm install --registry https://registry.npm.taobao.org ",
@@ -10,12 +10,12 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "ant-design-vue": "^1.7.2",
+    "@jeecg/antd-online-mini": "3.1.0-beta",
     "@antv/data-set": "^0.11.4",
     "@chenfengyuan/vue-qrcode": "^1.0.2",
-    "@jeecg/antd-online-mini": "2.4.5-RC",
     "@tinymce/tinymce-vue": "^2.1.0",
     "@toast-ui/editor": "^2.1.2",
-    "ant-design-vue": "^1.7.2",
     "app-info-parser": "^0.3.10",
     "area-data": "^5.0.6",
     "axios": "^0.21.1",
@@ -32,7 +32,6 @@
     "md5": "^2.2.1",
     "node-gyp": "^8.1.0",
     "nprogress": "^0.2.0",
-    "tinymce": "^5.3.2",
     "viser-vue": "^2.4.8",
     "vue": "^2.6.10",
     "vue-area-linkage": "^5.1.0",
@@ -53,7 +52,10 @@
     "bpmn-js": "^7.2.1",
     "xcrud": "0.4.1",
     "file-saver": "^2.0.2",
-    "throttle-debounce": "^2.1.0"
+    "throttle-debounce": "^2.1.0",
+    "tinymce": "5.4.1",
+    "china-area-data": "^5.0.1",
+    "qiankun": "^2.5.1"
   },
   "devDependencies": {
     "@babel/polyfill": "^7.2.5",
