@@ -39,7 +39,7 @@ spring:
   quartz:
     job-store-type: jdbc
     initialize-schema: embedded
-    #延迟10秒启动定时任务
+    #延迟1秒启动定时任务
     startup-delay: 1s
     #定时任务启动开关，true-开  false-关
     auto-startup: true

@@ -41,7 +41,7 @@ spring:
     initialize-schema: embedded
     #定时任务启动开关，true-开  false-关
     auto-startup: true
-    #延迟10秒启动定时任务
+    #延迟1秒启动定时任务
     startup-delay: 1s
     #启动时更新己存在的Job
     overwrite-existing-jobs: true
