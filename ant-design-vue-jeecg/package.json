@@ -64,7 +64,7 @@
     "@vue/cli-service": "^3.3.0",
     "@vue/eslint-config-standard": "^4.0.0",
     "babel-eslint": "7.2.3",
-    "compression-webpack-plugin": "^8.0.1",
+    "compression-webpack-plugin": "^5.0.2",
     "eslint": "^5.16.0",
     "eslint-plugin-vue": "^5.1.0",
     "html-webpack-plugin": "^4.2.0",

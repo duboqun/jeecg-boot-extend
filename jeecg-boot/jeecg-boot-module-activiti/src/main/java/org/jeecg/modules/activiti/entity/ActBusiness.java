@@ -48,7 +48,7 @@ public class ActBusiness {
     /**
      * id
      */
-    @TableId(type = IdType.ID_WORKER_STR)
+    @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "id")
     private String id;
     /**

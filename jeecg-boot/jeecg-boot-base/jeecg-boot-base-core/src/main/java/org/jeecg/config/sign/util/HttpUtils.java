@@ -2,6 +2,7 @@ package org.jeecg.config.sign.util;
 
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.jeecg.common.constant.SymbolConstant;
 import org.jeecg.common.util.oConvertUtils;
 import org.springframework.http.HttpMethod;
 
